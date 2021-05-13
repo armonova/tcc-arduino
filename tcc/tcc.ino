@@ -226,8 +226,8 @@ void loop() {
   double posiTotal_state = sqrt((xk_lati[0][0]*xk_lati[0][0]) + (xk_long[0][0]*xk_long[0][0]));
   
 
-  Serial.print(posiTotal_state + 0.1);
-  Serial.print(" ");
+//  Serial.print(posiTotal_state + 0.1);
+//  Serial.print(" ");
   Serial.print(speedTotal_state);
   Serial.print(" ");
   Serial.print(acc_acc_long);
