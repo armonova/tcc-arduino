@@ -6,7 +6,8 @@
 
 MPU9250 mpu;
 
-double C[3][3] = { { 0.0, 0.0, 0.0 },
+// matriz de rotação
+double rot[3][3] = { { 0.0, 0.0, 0.0 },
                    { 0.0, 0.0, 0.0 },
                    { 0.0, 0.0, 0.0 } };
 double theta, phi, psi;
@@ -39,7 +40,7 @@ void setup() {
     mpu.calibrateAccelGyro();
 
 //    Serial.println("Mag calibration will start in 5sec.");
-//    Serial.println("Please Wave device in a figure eight until done.");
+//    Serial.println("Please Wave device in a figure eight unt1il done.");
     delay(5000);
     mpu.calibrateMag();
 
@@ -66,28 +67,28 @@ void print_roll_pitch_yaw() {
     psi = mpu.getEulerZ() * (PI/180); // anugulo entre o vetor Z e o vetor Z'
 
     // primeira linha da matriz de rotação
-    C[0][0] = cos(theta) * cos(psi);
-    C[0][1] = -(cos(phi) * sin(psi)) + (sin(phi) * sin(theta) * cos(psi));
-    C[0][2] = (sin(phi) * sin(psi)) + (cos(phi) * sin(theta) * cos(psi));
+    rot[0][0] = cos(theta) * cos(psi);
+    rot[0][1] = -(cos(phi) * sin(psi)) + (sin(phi) * sin(theta) * cos(psi));
+    rot[0][2] = (sin(phi) * sin(psi)) + (cos(phi) * sin(theta) * cos(psi));
 
     // segunda linha da matriz de rotação
-    C[1][0] = cos(theta) * sin(psi);
-    C[1][1] = (cos(phi) * cos(psi)) + (sin(phi) * sin(theta) * sin(psi));
-    C[1][2] = -(sin(phi) * cos(psi)) + (cos(phi) * sin(theta) * sin(psi));
+    rot[1][0] = cos(theta) * sin(psi);
+    rot[1][1] = (cos(phi) * cos(psi)) + (sin(phi) * sin(theta) * sin(psi));
+    rot[1][2] = -(sin(phi) * cos(psi)) + (cos(phi) * sin(theta) * sin(psi));
 
     // terceira linha da matriz de rotação
-    C[2][0] = -sin(theta);
-    C[2][1] = sin(phi) * cos(theta);
-    C[2][2] = cos(phi) * cos(theta);
+    rot[2][0] = -sin(theta);
+    rot[2][1] = sin(phi) * cos(theta);
+    rot[2][2] = cos(phi) * cos(theta);
 
     acc_x = mpu.getAccX();
     acc_y = mpu.getAccY();
     acc_z = mpu.getAccZ();
 
     // multiplicação de matrizes
-    acc_N = (acc_x * C[0][0]) + (acc_y * C[0][1]) + (acc_z * C[0][2]);
-    acc_E = (acc_x * C[1][0]) + (acc_y * C[1][1]) + (acc_z * C[1][2]);
-    acc_D = (acc_x * C[2][0]) + (acc_y * C[2][1]) + (acc_z * C[2][2]);
+    acc_N = (acc_x * rot[0][0]) + (acc_y * rot[0][1]) + (acc_z * rot[0][2]);
+    acc_E = (acc_x * rot[1][0]) + (acc_y * rot[1][1]) + (acc_z * rot[1][2]);
+    acc_D = (acc_x * rot[2][0]) + (acc_y * rot[2][1]) + (acc_z * rot[2][2]);
 
   Serial.print(acc_N);
   Serial.print(" ");
