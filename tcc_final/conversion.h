@@ -11,12 +11,15 @@
 #include "Arduino.h"
 #include "MPU9250.h"
 
-class conv_class {
+class mpu_conv_class {
   public:
-    conv_class();
+    mpu_conv_class();
+    void config_mpu();
+    void make_conversion();
     double return_N();
     double return_E();
     double return_D();
+    bool update_data();
     
   private:
     double phi;

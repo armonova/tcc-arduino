@@ -8,9 +8,39 @@
 #include "Arduino.h"
 #include "conversion.h"
 
+
+#define PI 3.1415926535897932384626433832795
+
+
 MPU9250 mpu;
 
-conv_class::conv_class(){
+mpu_conv_class::mpu_conv_class() {}
+
+void mpu_conv_class::config_mpu() {
+  Wire.begin();
+  delay(2000);
+  if (!mpu.setup(0x68)) {  // change to your own address
+    while (1) {
+      Serial.println("MPU connection failed. Please check your connection with `connection_check` example.");
+      delay(5000);
+    }
+  }
+    // calibrate anytime you want to
+    // Serial.println("Accel Gyro calibration will start in 5sec.");
+    // Serial.println("Please leave the device still on the flat plane.");
+    mpu.verbose(true);
+    delay(5000);
+    mpu.calibrateAccelGyro();
+
+    // Serial.println("Mag calibration will start in 5sec.");
+    // Serial.println("Please Wave device in a figure eight unt1il done.");
+    delay(5000);
+    mpu.calibrateMag();
+
+    mpu.verbose(false);
+}
+
+void mpu_conv_class::make_conversion(){
   phi = mpu.getEulerX() * (PI/180); // angulo entre o eixo X e a reta nodal
   theta = mpu.getEulerY() * (PI/180); // angulo entre o eixo X' e a reta nodal
   psi = mpu.getEulerZ() * (PI/180); // anugulo entre o vetor Z e o vetor Z'
@@ -40,14 +70,18 @@ conv_class::conv_class(){
   acc_D = (acc_x * rot[2][0]) + (acc_y * rot[2][1]) + (acc_z * rot[2][2]); 
 }
 
-double conv_class::return_N() {
+bool mpu_conv_class::update_data() {
+  return mpu.update();
+}
+
+double mpu_conv_class::return_N() {
   return acc_N;
 }
 
-double conv_class::return_E() {
+double mpu_conv_class::return_E() {
   return acc_E;
 }
 
-double conv_class::return_D() {
+double mpu_conv_class::return_D() {
   return acc_D;
 }
