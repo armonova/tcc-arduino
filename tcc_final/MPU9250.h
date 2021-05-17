@@ -2,6 +2,8 @@
 #ifndef MPU9250_H
 #define MPU9250_H
 
+#define GRAVITY 9.7838
+
 #include <Wire.h>
 
 #include "MPU9250/MPU9250RegisterMap.h"
@@ -56,7 +58,7 @@ static constexpr uint8_t MPU9255_WHOAMI_DEFAULT_VALUE {0x73};
 static constexpr uint8_t MPU6500_WHOAMI_DEFAULT_VALUE {0x70};
 
 struct MPU9250Setting {
-    ACCEL_FS_SEL accel_fs_sel {ACCEL_FS_SEL::A16G};
+    ACCEL_FS_SEL accel_fs_sel {ACCEL_FS_SEL::A4G};
     GYRO_FS_SEL gyro_fs_sel {GYRO_FS_SEL::G2000DPS};
     MAG_OUTPUT_BITS mag_output_bits {MAG_OUTPUT_BITS::M16BITS};
     FIFO_SAMPLE_RATE fifo_sample_rate {FIFO_SAMPLE_RATE::SMPL_200HZ};
@@ -453,9 +455,10 @@ private:
         read_accel_gyro(raw_acc_gyro_data);  // INT cleared on any read
 
         // Now we'll calculate the accleration value into actual g's
-        a[0] = (float)raw_acc_gyro_data[0] * acc_resolution;  // get actual g value, this depends on scale being set
-        a[1] = (float)raw_acc_gyro_data[1] * acc_resolution;
-        a[2] = (float)raw_acc_gyro_data[2] * acc_resolution;
+        // Arthur: now is saving the value in m/s² - multiplied by the gravity value
+        a[0] = (float)raw_acc_gyro_data[0] * acc_resolution * GRAVITY;
+        a[1] = (float)raw_acc_gyro_data[1] * acc_resolution * GRAVITY;
+        a[2] = (float)raw_acc_gyro_data[2] * acc_resolution * GRAVITY;
 
         temperature_count = raw_acc_gyro_data[3];                  // Read the adc values
         temperature = ((float)temperature_count) / 333.87 + 21.0;  // Temperature in degrees Centigrade
@@ -873,13 +876,13 @@ private:
             // 2 Gs (00), 4 Gs (01), 8 Gs (10), and 16 Gs  (11).
             // Here's a bit of an algorith to calculate DPS/(ADC tick) based on that 2-bit value:
             case ACCEL_FS_SEL::A2G:
-                return 2.0 / 32768.0;
+                return (2.0 / 32768.0);
             case ACCEL_FS_SEL::A4G:
-                return 4.0 / 32768.0;
+                return (4.0 / 32768.0);
             case ACCEL_FS_SEL::A8G:
-                return 8.0 / 32768.0;
+                return (8.0 / 32768.0);
             case ACCEL_FS_SEL::A16G:
-                return 16.0 / 32768.0;
+                return (16.0 / 32768.0);
             default:
                 return 0.;
         }

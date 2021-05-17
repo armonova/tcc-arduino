@@ -16,12 +16,12 @@ MPU9250 mpu;
 
 mpu_conv_class::mpu_conv_class() {}
 
-void mpu_conv_class::config_mpu() {
+bool mpu_conv_class::config_mpu() {
   Wire.begin();
   delay(2000);
   if (!mpu.setup(0x68)) {  // change to your own address
     while (1) {
-      Serial.println("MPU connection failed. Please check your connection with `connection_check` example.");
+      return false;
       delay(5000);
     }
   }
@@ -38,6 +38,8 @@ void mpu_conv_class::config_mpu() {
     mpu.calibrateMag();
 
     mpu.verbose(false);
+    
+    return true;
 }
 
 void mpu_conv_class::make_conversion(){
@@ -74,14 +76,14 @@ bool mpu_conv_class::update_data() {
   return mpu.update();
 }
 
-double mpu_conv_class::return_N() {
-  return acc_N;
+double mpu_conv_class::return_acc_NED(char select) {
+  if (select == 'N') return acc_N;
+  if (select == 'E') return acc_E;
+  if (select == 'D') return acc_D;
 }
 
-double mpu_conv_class::return_E() {
-  return acc_E;
-}
-
-double mpu_conv_class::return_D() {
-  return acc_D;
+double mpu_conv_class::return_acc_XYZ(char select) {
+  if (select == 'x') return acc_x;
+  if (select == 'y') return acc_y;
+  if (select == 'z') return acc_z;
 }

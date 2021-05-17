@@ -14,18 +14,14 @@
 class mpu_conv_class {
   public:
     mpu_conv_class();
-    void config_mpu();
+    bool config_mpu();
     void make_conversion();
-    double return_N();
-    double return_E();
-    double return_D();
+    double return_acc_NED(char select);
+    double return_acc_XYZ(char select);
     bool update_data();
     
   private:
-    double phi;
-    double theta;
-    double psi;
-    
+    double phi, theta, psi; // angulos de euler
     double acc_N, acc_E, acc_D;
     double acc_x, acc_y, acc_z;
     
