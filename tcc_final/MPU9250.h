@@ -58,7 +58,7 @@ static constexpr uint8_t MPU9255_WHOAMI_DEFAULT_VALUE {0x73};
 static constexpr uint8_t MPU6500_WHOAMI_DEFAULT_VALUE {0x70};
 
 struct MPU9250Setting {
-    ACCEL_FS_SEL accel_fs_sel {ACCEL_FS_SEL::A4G};
+    ACCEL_FS_SEL accel_fs_sel {ACCEL_FS_SEL::A16G};
     GYRO_FS_SEL gyro_fs_sel {GYRO_FS_SEL::G2000DPS};
     MAG_OUTPUT_BITS mag_output_bits {MAG_OUTPUT_BITS::M16BITS};
     FIFO_SAMPLE_RATE fifo_sample_rate {FIFO_SAMPLE_RATE::SMPL_200HZ};

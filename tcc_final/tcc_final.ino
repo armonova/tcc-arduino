@@ -12,7 +12,7 @@
 #define CALIB_PENDING 13
 #define CALIB_DONE 8
 
-mpu_conv_class mpu_new;
+mpu_conv_class mpu_new(CALIB_PENDING, CALIB_DONE);
 
 float speed_acc_N = 0.0;
 float speed_acc_E = 0.0;
@@ -96,7 +96,7 @@ void loop() {
       double speedTotal_state = sqrt((xk_E[1][0]*xk_E[1][0]) + (xk_N[1][0]*xk_N[1][0]));
       double posiTotal_state = sqrt((xk_E[0][0]*xk_E[0][0]) + (xk_N[0][0]*xk_N[0][0]));
 
-      Serial.print(speedTotal_state);
+      Serial.print(0);
       Serial.print(" ");
       Serial.print(mpu_new.return_acc_NED('N'));
       Serial.print(" ");

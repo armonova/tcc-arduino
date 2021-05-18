@@ -13,7 +13,7 @@
 
 class mpu_conv_class {
   public:
-    mpu_conv_class();
+    mpu_conv_class(int calib_pending, int calib_done);
     bool config_mpu();
     void make_conversion();
     double return_acc_NED(char select);
@@ -24,6 +24,8 @@ class mpu_conv_class {
     double phi, theta, psi; // angulos de euler
     double acc_N, acc_E, acc_D;
     double acc_x, acc_y, acc_z;
+
+    int _calib_pending, _calib_done;
     
     double rot[3][3] = { { 0.0, 0.0, 0.0 },
                          { 0.0, 0.0, 0.0 },

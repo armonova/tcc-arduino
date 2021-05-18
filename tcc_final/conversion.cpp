@@ -14,7 +14,15 @@
 
 MPU9250 mpu;
 
-mpu_conv_class::mpu_conv_class() {}
+mpu_conv_class::mpu_conv_class(int calib_pending, int calib_done) {
+  _calib_pending = calib_pending;
+  _calib_done = calib_done;
+
+  pinMode(_calib_pending, OUTPUT);
+  pinMode(_calib_done, OUTPUT);
+  digitalWrite(_calib_pending, LOW);
+  digitalWrite(_calib_done, LOW);
+}
 
 bool mpu_conv_class::config_mpu() {
   Wire.begin();
@@ -28,12 +36,16 @@ bool mpu_conv_class::config_mpu() {
     // calibrate anytime you want to
     // Serial.println("Accel Gyro calibration will start in 5sec.");
     // Serial.println("Please leave the device still on the flat plane.");
+    digitalWrite(_calib_pending, HIGH);
+    digitalWrite(_calib_done, LOW);
     mpu.verbose(true);
     delay(5000);
     mpu.calibrateAccelGyro();
 
     // Serial.println("Mag calibration will start in 5sec.");
     // Serial.println("Please Wave device in a figure eight unt1il done.");
+    digitalWrite(_calib_pending, HIGH);
+    digitalWrite(_calib_done, HIGH);
     delay(5000);
     mpu.calibrateMag();
 
@@ -43,9 +55,9 @@ bool mpu_conv_class::config_mpu() {
 }
 
 void mpu_conv_class::make_conversion(){
-  phi = mpu.getEulerX() * (PI/180); // angulo entre o eixo X e a reta nodal
-  theta = mpu.getEulerY() * (PI/180); // angulo entre o eixo X' e a reta nodal
-  psi = mpu.getEulerZ() * (PI/180); // anugulo entre o vetor Z e o vetor Z'
+  phi = mpu.getEulerX() * (PI/180.0); // angulo entre o eixo X e a reta nodal
+  theta = mpu.getEulerY() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
+  psi = mpu.getEulerZ() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
   
   // primeira linha da matriz de rotação
   rot[0][0] = cos(theta) * cos(psi);
