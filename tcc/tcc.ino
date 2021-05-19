@@ -55,12 +55,12 @@ void setup() {
   IMU.setSrd(19);
 
   int acquires = 10; // num of data acquires to standard deviation
-  float acc_acc_DP_lati[10];
-  float acc_acc_DP_long[10];
-  float speed_acc_DP_lati[10];
-  float speed_acc_DP_long[10];
-  float posi_acc_DP_lati[10];
-  float posi_acc_DP_long[10];
+  float acc_acc_DP_lati[acquires];
+  float acc_acc_DP_long[acquires];
+  float speed_acc_DP_lati[acquires];
+  float speed_acc_DP_long[acquires];
+  float posi_acc_DP_lati[acquires];
+  float posi_acc_DP_long[acquires];
 
   float sum_acc_acc_lati = 0.0;
   float sum_acc_acc_long = 0.0;

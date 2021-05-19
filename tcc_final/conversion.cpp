@@ -55,33 +55,34 @@ bool mpu_conv_class::config_mpu() {
 }
 
 void mpu_conv_class::make_conversion(){
-  phi = mpu.getEulerX() * (PI/180.0); // angulo entre o eixo X e a reta nodal
-  theta = mpu.getEulerY() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
-  psi = mpu.getEulerZ() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
+  // converte para angulos em radianos
+  _phi = mpu.getEulerX() * (PI/180.0); // angulo entre o eixo X e a reta nodal
+  _theta = mpu.getEulerY() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
+  _psi = mpu.getEulerZ() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
   
-  // primeira linha da matriz de rotação
-  rot[0][0] = cos(theta) * cos(psi);
-  rot[0][1] = -(cos(phi) * sin(psi)) + (sin(phi) * sin(theta) * cos(psi));
-  rot[0][2] = (sin(phi) * sin(psi)) + (cos(phi) * sin(theta) * cos(psi));
+  // primeira linha da matriz de _rotação
+  _rot[0][0] = cos(_theta) * cos(_psi);
+  _rot[0][1] = -(cos(_phi) * sin(_psi)) + (sin(_phi) * sin(_theta) * cos(_psi));
+  _rot[0][2] = (sin(_phi) * sin(_psi)) + (cos(_phi) * sin(_theta) * cos(_psi));
   
-  // segunda linha da matriz de rotação
-  rot[1][0] = cos(theta) * sin(psi);
-  rot[1][1] = (cos(phi) * cos(psi)) + (sin(phi) * sin(theta) * sin(psi));
-  rot[1][2] = -(sin(phi) * cos(psi)) + (cos(phi) * sin(theta) * sin(psi));
+  // segunda linha da matriz de _rotação
+  _rot[1][0] = cos(_theta) * sin(_psi);
+  _rot[1][1] = (cos(_phi) * cos(_psi)) + (sin(_phi) * sin(_theta) * sin(_psi));
+  _rot[1][2] = -(sin(_phi) * cos(_psi)) + (cos(_phi) * sin(_theta) * sin(_psi));
   
-  // terceira linha da matriz de rotação
-  rot[2][0] = -sin(theta);
-  rot[2][1] = sin(phi) * cos(theta);
-  rot[2][2] = cos(phi) * cos(theta);
+  // terceira linha da matriz de _rotação
+  _rot[2][0] = -sin(_theta);
+  _rot[2][1] = sin(_phi) * cos(_theta);
+  _rot[2][2] = cos(_phi) * cos(_theta);
   
-  acc_x = mpu.getAccX();
-  acc_y = mpu.getAccY();
-  acc_z = mpu.getAccZ();
+  _acc_x = mpu.getAccX();
+  _acc_y = mpu.getAccY();
+  _acc_z = mpu.getAccZ();
   
   // multiplicação de matrizes
-  acc_N = (acc_x * rot[0][0]) + (acc_y * rot[0][1]) + (acc_z * rot[0][2]);
-  acc_E = (acc_x * rot[1][0]) + (acc_y * rot[1][1]) + (acc_z * rot[1][2]);
-  acc_D = (acc_x * rot[2][0]) + (acc_y * rot[2][1]) + (acc_z * rot[2][2]); 
+  _acc_N = (_acc_x * _rot[0][0]) + (_acc_y * _rot[0][1]) + (_acc_z * _rot[0][2]);
+  _acc_E = (_acc_x * _rot[1][0]) + (_acc_y * _rot[1][1]) + (_acc_z * _rot[1][2]);
+  _acc_D = (_acc_x * _rot[2][0]) + (_acc_y * _rot[2][1]) + (_acc_z * _rot[2][2]); 
 }
 
 bool mpu_conv_class::update_data() {
@@ -89,13 +90,54 @@ bool mpu_conv_class::update_data() {
 }
 
 double mpu_conv_class::return_acc_NED(char select) {
-  if (select == 'N') return acc_N;
-  if (select == 'E') return acc_E;
-  if (select == 'D') return acc_D;
+  if (select == 'N') return _acc_N;
+  if (select == 'E') return _acc_E;
+  if (select == 'D') return _acc_D;
 }
 
 double mpu_conv_class::return_acc_XYZ(char select) {
-  if (select == 'x') return acc_x;
-  if (select == 'y') return acc_y;
-  if (select == 'z') return acc_z;
+  if (select == 'x') return _acc_x;
+  if (select == 'y') return _acc_y;
+  if (select == 'z') return _acc_z;
+}
+
+void mpu_conv_class::standard_deviation() {
+  char _acquires = 100; // número de aquisição para cálculo do desvio padrão
+  
+  float _acc_acc_DP_N[_acquires];
+  float _acc_acc_DP_E[_acquires];
+
+  float _sum_acc_acc_N = 0.0;
+  float _sum_acc_acc_E = 0.0;
+  
+  for (char i = 0; i < _acquires; i++) {
+    make_conversion();
+    _acc_acc_DP_N[i] = _acc_N;
+    _acc_acc_DP_E[i] = _acc_E;
+  
+    _sum_acc_acc_N += _acc_acc_DP_N[i];
+    _sum_acc_acc_E += _acc_acc_DP_E[i];
+    delay(25); // frequencia de 40Hz
+  }
+
+  delay(2000);
+
+  float _avg_acc_acc_N = _sum_acc_acc_N / _acquires;  
+  float _avg_acc_acc_E = _sum_acc_acc_E / _acquires;
+  
+  float _auxN_DP_acc_acc_N = 0.0;
+  float _auxE_DP_acc_acc_E = 0.0;
+
+  for (int i = 0; i < _acquires; i++) {
+    _auxN_DP_acc_acc_N += (_acc_acc_DP_N[i] - _avg_acc_acc_N) * (_acc_acc_DP_N[i] - _avg_acc_acc_N);
+    _auxE_DP_acc_acc_E += (_acc_acc_DP_E[i] - _avg_acc_acc_E) * (_acc_acc_DP_E[i] - _avg_acc_acc_E);
+  }
+
+  _DP_acc_acc_N = sqrt(_auxN_DP_acc_acc_N / _acquires);  
+  _DP_acc_acc_E = sqrt(_auxE_DP_acc_acc_E / _acquires);
+}
+
+double mpu_conv_class::return_DP_NED(char select) {
+  if (select == 'N') return _DP_acc_acc_N;
+  if (select == 'E') return _DP_acc_acc_E;
 }

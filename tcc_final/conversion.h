@@ -19,15 +19,20 @@ class mpu_conv_class {
     double return_acc_NED(char select);
     double return_acc_XYZ(char select);
     bool update_data();
+    void standard_deviation();
+    double return_DP_NED(char select);
+    
     
   private:
-    double phi, theta, psi; // angulos de euler
-    double acc_N, acc_E, acc_D;
-    double acc_x, acc_y, acc_z;
+    double _phi, _theta, _psi; // angulos de euler
+    double _acc_N, _acc_E, _acc_D;
+    double _acc_x, _acc_y, _acc_z;
 
     int _calib_pending, _calib_done;
+
+    double _DP_acc_acc_N, _DP_acc_acc_E; // desvio padrão da aceleração
     
-    double rot[3][3] = { { 0.0, 0.0, 0.0 },
+    double _rot[3][3] = { { 0.0, 0.0, 0.0 },
                          { 0.0, 0.0, 0.0 },
                          { 0.0, 0.0, 0.0 } };
 };
