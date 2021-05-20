@@ -56,9 +56,14 @@ bool mpu_conv_class::config_mpu() {
 
 void mpu_conv_class::make_conversion(){
   // converte para angulos em radianos
-  _phi = mpu.getEulerX() * (PI/180.0); // angulo entre o eixo X e a reta nodal
-  _theta = mpu.getEulerY() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
-  _psi = mpu.getEulerZ() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
+  // angulos de Euler
+//  _phi = mpu.getEulerX() * (PI/180.0); // angulo entre o eixo X e a reta nodal
+//  _theta = mpu.getEulerY() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
+//  _psi = mpu.getEulerZ() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
+  // angulos da medida do magnetómetro - teste
+  _phi = mpu.getRoll() * (PI/180.0); // angulo entre o eixo X e a reta nodal
+  _theta = mpu.getPitch() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
+  _psi = mpu.getYaw() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
   
   // primeira linha da matriz de _rotação
   _rot[0][0] = cos(_theta) * cos(_psi);
@@ -102,7 +107,7 @@ double mpu_conv_class::return_acc_XYZ(char select) {
 }
 
 void mpu_conv_class::standard_deviation() {
-  char _acquires = 100; // número de aquisição para cálculo do desvio padrão
+  char _acquires = 50; // número de aquisição para cálculo do desvio padrão
   
   float _acc_acc_DP_N[_acquires];
   float _acc_acc_DP_E[_acquires];

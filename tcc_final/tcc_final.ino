@@ -79,6 +79,8 @@ void setup() {
   
   Q_E[0][0] = DP_posi_E * DP_posi_E;
   Q_E[1][1] = DP_vel_E * DP_vel_E;
+
+  Serial.println("Covariances matrix calculated");
   
   digitalWrite(CALIB_COV, LOW);
 }
