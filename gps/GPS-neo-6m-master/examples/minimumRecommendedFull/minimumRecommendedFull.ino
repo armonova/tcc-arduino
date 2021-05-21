@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
-#include <Gpsneo.h>
+#include "Gpsneo.h"
 
-Gpsneo gps(4, 3, 9600);
+Gpsneo gps(4, 3, 115200);
 
 
 char latitude[15];
@@ -11,7 +11,7 @@ char longitudeMeridian[15];
 char speedKnots[10];
 void  setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.println("Opa 1");
 }
 
