@@ -16,20 +16,25 @@ class mpu_conv_class {
     mpu_conv_class(int calib_pending, int calib_done);
     bool config_mpu();
     void make_conversion();
-    float return_acc_NED(char select);
-    float return_acc_XYZ(char select);
+    double return_acc_NED(char select);
+    double return_acc_XYZ(char select);
     bool update_data();
     void standard_deviation();
-    float return_DP_NED(char select);
+    double return_DP_NED(char select);
     
     
   private:
-    float _acc_N, _acc_E, _acc_D;
-    float _acc_x, _acc_y, _acc_z;
+    double _phi, _theta, _psi; // angulos de euler
+    double _acc_N, _acc_E, _acc_D;
+    double _acc_x, _acc_y, _acc_z;
 
     int _calib_pending, _calib_done;
 
-    float _DP_acc_acc_N, _DP_acc_acc_E; // desvio padrão da aceleração
+    double _DP_acc_acc_N, _DP_acc_acc_E; // desvio padrão da aceleração
+    
+    double _rot[3][3] = { { 0.0, 0.0, 0.0 },
+                         { 0.0, 0.0, 0.0 },
+                         { 0.0, 0.0, 0.0 } };
 };
 
 #endif

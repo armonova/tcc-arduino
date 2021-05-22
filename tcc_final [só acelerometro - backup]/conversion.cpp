@@ -55,10 +55,6 @@ bool mpu_conv_class::config_mpu() {
 }
 
 void mpu_conv_class::make_conversion(){
-  float _phi, _theta, _psi; // angulos de euler
-  float _rot[3][3] = { { 0.0, 0.0, 0.0 },
-                       { 0.0, 0.0, 0.0 },
-                       { 0.0, 0.0, 0.0 } };
   // converte para angulos em radianos
   // angulos de Euler
 //  _phi = mpu.getEulerX() * (PI/180.0); // angulo entre o eixo X e a reta nodal
@@ -98,13 +94,13 @@ bool mpu_conv_class::update_data() {
   return mpu.update();
 }
 
-float mpu_conv_class::return_acc_NED(char select) {
+double mpu_conv_class::return_acc_NED(char select) {
   if (select == 'N') return _acc_N;
   if (select == 'E') return _acc_E;
   if (select == 'D') return _acc_D;
 }
 
-float mpu_conv_class::return_acc_XYZ(char select) {
+double mpu_conv_class::return_acc_XYZ(char select) {
   if (select == 'x') return _acc_x;
   if (select == 'y') return _acc_y;
   if (select == 'z') return _acc_z;
@@ -146,7 +142,7 @@ void mpu_conv_class::standard_deviation() {
   _DP_acc_acc_E = sqrt(_auxE_DP_acc_acc_E / _acquires);
 }
 
-float mpu_conv_class::return_DP_NED(char select) {
+double mpu_conv_class::return_DP_NED(char select) {
   if (select == 'N') return _DP_acc_acc_N;
   if (select == 'E') return _DP_acc_acc_E;
 }

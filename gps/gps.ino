@@ -41,6 +41,7 @@ void loop()
   unsigned long chars;
   // For one second we parse GPS data and report some key values
   for (unsigned long start = millis(); millis() - start < 0.025;) {
+    Serial.println("Teste");
     while (gpsSerial.available()) {
       char c = gpsSerial.read();
       if (gps.encode(c)) // Atribui true para newData caso novos dados sejam recebidos
