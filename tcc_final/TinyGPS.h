@@ -51,9 +51,7 @@ public:
     GPS_INVALID_HDOP = 0xFFFFFFFF
   };
 
-  void standard_deviation_gps();
-
-  static const float GPS_INVALID_F_ANGLE, GPS_INVALID_F_ALTITUDE, GPS_INVALID_F_SPEED;
+  static const float GPS_INVALID_F_ANGLE, GPS_INVALID_F_SPEED;
 
   TinyGPS();
   bool encode(char c); // process one character received from GPS
@@ -63,23 +61,12 @@ public:
   // (note: versions 12 and earlier gave lat/long in 100,000ths of a degree.
   void get_position(long *latitude, long *longitude, unsigned long *fix_age = 0);
 
-  // course in last full GPRMC sentence in 100th of a degree
-  inline unsigned long course() { return _course; }
-
   // speed in last full GPRMC sentence in 100ths of a knot
   inline unsigned long speed() { return _speed; }
 
-  // horizontal dilution of precision in 100ths
-  inline unsigned long hdop() { return _hdop; }
-
   void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
-  float f_course();
   float f_speed_knots();
   float f_speed_mps();
-
-  static int library_version() { return _GPS_VERSION; }
-  
-  static const char *cardinal(float course);
 
 #ifndef _GPS_NO_STATS
   void stats(unsigned long *chars, unsigned short *good_sentences, unsigned short *failed_cs);
@@ -92,8 +79,6 @@ private:
   long _latitude, _new_latitude;
   long _longitude, _new_longitude;
   unsigned long  _speed, _new_speed;
-  unsigned long  _course, _new_course;
-  unsigned long  _hdop, _new_hdop;
   unsigned long _last_position_fix, _new_position_fix;
 
   // parsing state variables

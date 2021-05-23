@@ -84,9 +84,9 @@ void mpu_conv_class::make_conversion(){
   _rot[2][1] = sin(_phi) * cos(_theta);
   _rot[2][2] = cos(_phi) * cos(_theta);
   
-  _acc_x = mpu.getAccX();
-  _acc_y = mpu.getAccY();
-  _acc_z = mpu.getAccZ();
+  float _acc_x = mpu.getAccX();
+  float _acc_y = mpu.getAccY();
+  float _acc_z = mpu.getAccZ();
   
   // multiplicação de matrizes
   _acc_N = (_acc_x * _rot[0][0]) + (_acc_y * _rot[0][1]) + (_acc_z * _rot[0][2]);
@@ -102,60 +102,4 @@ float mpu_conv_class::return_acc_NED(char select) {
   if (select == 'N') return _acc_N;
   if (select == 'E') return _acc_E;
   if (select == 'D') return _acc_D;
-}
-
-float mpu_conv_class::return_acc_XYZ(char select) {
-  if (select == 'x') return _acc_x;
-  if (select == 'y') return _acc_y;
-  if (select == 'z') return _acc_z;
-}
-
-void mpu_conv_class::standard_deviation_acc() {
-  char _acquires = 50; // número de aquisição para cálculo do desvio padrão
-  
-  float _acc_acc_DP_N[_acquires];
-  float _acc_acc_DP_E[_acquires];
-  float _acc_acc_DP_MOD[_acquires];
-
-  float _sum_acc_acc_N = 0.0;
-  float _sum_acc_acc_E = 0.0;
-  float _sum_acc_acc_MOD = 0.0;
-  
-  for (char i = 0; i < _acquires; i++) {
-    make_conversion();
-    _acc_acc_DP_N[i] = _acc_N;
-    _acc_acc_DP_E[i] = _acc_E;
-    _acc_acc_DP_MOD[i] = sqrt((_acc_acc_DP_N[i] * _acc_acc_DP_N[i]) * (_acc_acc_DP_E[i]) * _acc_acc_DP_E[i]);
-  
-    _sum_acc_acc_N += _acc_acc_DP_N[i];
-    _sum_acc_acc_E += _acc_acc_DP_E[i];
-    _sum_acc_acc_MOD += _acc_acc_DP_MOD[i];
-    delay(25); // frequencia de 40Hz
-  }
-
-  delay(2000);
-
-  float _avg_acc_acc_N = _sum_acc_acc_N / _acquires;  
-  float _avg_acc_acc_E = _sum_acc_acc_E / _acquires;
-  float _avg_acc_acc_MOD = _sum_acc_acc_MOD / _acquires;
-  
-  float _auxN_DP_acc_acc_N = 0.0;
-  float _auxE_DP_acc_acc_E = 0.0;
-  float _auxE_DP_acc_acc_MOD = 0.0;
-
-  for (int i = 0; i < _acquires; i++) {
-    _auxN_DP_acc_acc_N += (_acc_acc_DP_N[i] - _avg_acc_acc_N) * (_acc_acc_DP_N[i] - _avg_acc_acc_N);
-    _auxE_DP_acc_acc_E += (_acc_acc_DP_E[i] - _avg_acc_acc_E) * (_acc_acc_DP_E[i] - _avg_acc_acc_E);
-    _auxE_DP_acc_acc_MOD += (_acc_acc_DP_MOD[i] - _avg_acc_acc_MOD) * (_acc_acc_DP_MOD[i] - _avg_acc_acc_MOD);
-  }
-
-  _DP_acc_acc_N = sqrt(_auxN_DP_acc_acc_N / _acquires);  
-  _DP_acc_acc_E = sqrt(_auxE_DP_acc_acc_E / _acquires);
-  _DP_acc_acc_MOD = sqrt(_auxE_DP_acc_acc_MOD / _acquires);
-}
-
-float mpu_conv_class::return_DP_NED(char select) {
-  if (select == 'N') return _DP_acc_acc_N;
-  if (select == 'E') return _DP_acc_acc_E;
-  if (select == 'M') return _DP_acc_acc_MOD;
 }

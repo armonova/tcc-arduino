@@ -17,19 +17,13 @@ class mpu_conv_class {
     bool config_mpu();
     void make_conversion();
     float return_acc_NED(char select);
-    float return_acc_XYZ(char select);
-    bool update_data();
-    void standard_deviation_acc();
-    float return_DP_NED(char select);
-    
+    // float return_acc_XYZ(char select);
+    bool update_data();    
     
   private:
     float _acc_N, _acc_E, _acc_D;
-    float _acc_x, _acc_y, _acc_z;
 
     char _calib_pending, _calib_done;
-
-    float _DP_acc_acc_N, _DP_acc_acc_E, _DP_acc_acc_MOD; // desvio padrão da aceleração
 };
 
 #endif
