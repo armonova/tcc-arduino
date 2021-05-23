@@ -38,11 +38,22 @@ float original_posi_gps_N;
 float original_posi_gps_E;
 
 // matriz "Q", de covariância
+/*
 float Q_N[2][2] = {
   {0, 0},
   {0, 0}
 };
 float Q_E[2][2] = {
+  {0, 0},
+  {0, 0}
+};
+*/
+float Q_MOD[2][2] = {
+  {0, 0},
+  {0, 0}
+};
+
+float R_MOD[2][2] = {
   {0, 0},
   {0, 0}
 };
@@ -80,22 +91,29 @@ void setup() {
 
   // Inicializa o cáluclo das matrizes de COVARIÂNCIA
   digitalWrite(CALIB_COV, HIGH);
-  delay(3000); // espera 3 segundos para parar a placa
-  mpu_new.standard_deviation();
-  float DP_posi_N = 0.0003125 * mpu_new.return_DP_NED('N'); // 0.0003125 = (0.025 * 0.025)/2
-  float DP_vel_N = 0.025 * mpu_new.return_DP_NED('N');
-
-  float DP_posi_E = 0.0003125 * mpu_new.return_DP_NED('E'); // 0.0003125 = (0.025 * 0.025)/2
-  float DP_vel_E = 0.025 * mpu_new.return_DP_NED('E');
-  
+  delay(5000); // espera 3 segundos para parar a placa
+  mpu_new.standard_deviation_acc();
+  gps.standard_deviation_gps();
+  /*
+   * float DP_posi_N = 0.0003125 * mpu_new.return_DP_NED('N'); // 0.0003125 = (0.025 * 0.025)/2
+   * float DP_vel_N = 0.025 * mpu_new.return_DP_NED('N');
+   * float DP_posi_E = 0.0003125 * mpu_new.return_DP_NED('E'); // 0.0003125 = (0.025 * 0.025)/2
+   */
+  float DP_posi_MOD = 0.0003125 * mpu_new.return_DP_NED('M'); // 0.0003125 = (0.025 * 0.025)/2
+  float DP_vel_MOD = 0.025 * mpu_new.return_DP_NED('M');
+    
   // Determinação da matriz Q de covariância
-  Q_N[0][0] = DP_posi_N * DP_posi_N;
-  Q_N[1][1] = DP_vel_N * DP_vel_N;
+  /*
+   * Q_N[0][0] = DP_posi_N * DP_posi_N;
+   * Q_N[1][1] = DP_vel_N * DP_vel_N;
   
-  Q_E[0][0] = DP_posi_E * DP_posi_E;
-  Q_E[1][1] = DP_vel_E * DP_vel_E;
-
-  // Serial.println("Covariances matrix calculated");
+   * Q_E[0][0] = DP_posi_E * DP_posi_E;
+   * Q_E[1][1] = DP_vel_E * DP_vel_E;
+   */
+  Q_MOD[0][0] = DP_posi_MOD * DP_posi_MOD;
+  Q_MOD[1][1] = DP_vel_MOD * DP_vel_MOD;
+  
+  // Matriz de covariância calculada
 
   /*
    * GPS

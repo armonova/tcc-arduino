@@ -88,11 +88,6 @@ class MPU9250_ {
     float mag_bias_factory[3] {0., 0., 0.};
     float mag_bias[3] {0., 0., 0.};  // mag calibration value in MAG_OUTPUT_BITS: 16BITS
     float mag_scale[3] {1., 1., 1.};
-    float magnetic_declination = -7.51;  // Japan, 24th June
-
-    // Temperature
-    int16_t temperature_count {0};  // temperature raw count output
-    float temperature {0.f};        // Stores the real internal chip temperature in degrees Celsius
 
     // Self Test
     float self_test_result[6] {0.f};  // holds results of gyro and accelerometer self test
@@ -103,7 +98,6 @@ class MPU9250_ {
     float m[3] {0.f, 0.f, 0.f};
     float q[4] = {1.0f, 0.0f, 0.0f, 0.0f};  // vector to hold quaternion
     float euler[3] {0.f, 0.f, 0.f};
-    float lin_acc[3] {0.f, 0.f, 0.f};  // linear acceleration (acceleration with gravity component subtracted)
     QuaternionFilter quat_filter;
 
     // Other settings
@@ -230,8 +224,6 @@ public:
         quat_filter.update(an, ae, ad, gn, ge, gd, mn, me, md, q);
 
         if (!b_ahrs) {
-            temperature_count = read_temperature_data();               // Read the adc values
-            temperature = ((float)temperature_count) / 333.87 + 21.0;  // Temperature in degrees Centigrade
         } else {
             update_euler(q[0], q[1], q[2], q[3]);
         }
@@ -246,16 +238,6 @@ public:
     float getEulerY() const { return euler[1]; }
     float getEulerZ() const { return euler[2]; }
 
-    float getQuaternionX() const { return q[1]; }
-    float getQuaternionY() const { return q[2]; }
-    float getQuaternionZ() const { return q[3]; }
-    float getQuaternionW() const { return q[0]; }
-
-    float getAcc(const uint8_t i) const { return (i < 3) ? a[i] : 0.f; }
-    float getGyro(const uint8_t i) const { return (i < 3) ? g[i] : 0.f; }
-    float getMag(const uint8_t i) const { return (i < 3) ? m[i] : 0.f; }
-    float getLinearAcc(const uint8_t i) const { return (i < 3) ? lin_acc[i] : 0.f; }
-
     float getAccX() const { return a[0]; }
     float getAccY() const { return a[1]; }
     float getAccZ() const { return a[2]; }
@@ -265,53 +247,6 @@ public:
     float getMagX() const { return m[0]; }
     float getMagY() const { return m[1]; }
     float getMagZ() const { return m[2]; }
-    float getLinearAccX() const { return lin_acc[0]; }
-    float getLinearAccY() const { return lin_acc[1]; }
-    float getLinearAccZ() const { return lin_acc[2]; }
-
-    float getAccBias(const uint8_t i) const { return (i < 3) ? acc_bias[i] : 0.f; }
-    float getGyroBias(const uint8_t i) const { return (i < 3) ? gyro_bias[i] : 0.f; }
-    float getMagBias(const uint8_t i) const { return (i < 3) ? mag_bias[i] : 0.f; }
-    float getMagScale(const uint8_t i) const { return (i < 3) ? mag_scale[i] : 0.f; }
-
-    float getAccBiasX() const { return acc_bias[0]; }
-    float getAccBiasY() const { return acc_bias[1]; }
-    float getAccBiasZ() const { return acc_bias[2]; }
-    float getGyroBiasX() const { return gyro_bias[0]; }
-    float getGyroBiasY() const { return gyro_bias[1]; }
-    float getGyroBiasZ() const { return gyro_bias[2]; }
-    float getMagBiasX() const { return mag_bias[0]; }
-    float getMagBiasY() const { return mag_bias[1]; }
-    float getMagBiasZ() const { return mag_bias[2]; }
-    float getMagScaleX() const { return mag_scale[0]; }
-    float getMagScaleY() const { return mag_scale[1]; }
-    float getMagScaleZ() const { return mag_scale[2]; }
-
-    float getTemperature() const { return temperature; }
-
-    void setAccBias(const float x, const float y, const float z) {
-        acc_bias[0] = x;
-        acc_bias[1] = y;
-        acc_bias[2] = z;
-        write_accel_offset();
-    }
-    void setGyroBias(const float x, const float y, const float z) {
-        gyro_bias[0] = x;
-        gyro_bias[1] = y;
-        gyro_bias[2] = z;
-        write_gyro_offset();
-    }
-    void setMagBias(const float x, const float y, const float z) {
-        mag_bias[0] = x;
-        mag_bias[1] = y;
-        mag_bias[2] = z;
-    }
-    void setMagScale(const float x, const float y, const float z) {
-        mag_scale[0] = x;
-        mag_scale[1] = y;
-        mag_scale[2] = z;
-    }
-    void setMagneticDeclination(const float d) { magnetic_declination = d; }
 
     void selectFilter(QuatFilterSel sel) {
         quat_filter.select_filter(sel);
@@ -439,15 +374,10 @@ private:
         euler[0] *= 180.0f / PI;
         euler[1] *= 180.0f / PI;
         euler[2] *= 180.0f / PI;
-        euler[2] += magnetic_declination;
         if (euler[2] >= +180.f)
             euler[2] -= 360.f;
         else if (euler[2] < -180.f)
             euler[2] += 360.f;
-
-        lin_acc[0] = a[0] + a31;
-        lin_acc[1] = a[1] + a32;
-        lin_acc[2] = a[2] - a33;
     }
 
     void update_accel_gyro() {
@@ -459,9 +389,6 @@ private:
         a[0] = (float)raw_acc_gyro_data[0] * acc_resolution * GRAVITY;
         a[1] = (float)raw_acc_gyro_data[1] * acc_resolution * GRAVITY;
         a[2] = (float)raw_acc_gyro_data[2] * acc_resolution * GRAVITY;
-
-        temperature_count = raw_acc_gyro_data[3];                  // Read the adc values
-        temperature = ((float)temperature_count) / 333.87 + 21.0;  // Temperature in degrees Centigrade
 
         // Calculate the gyro value into actual degrees per second
         g[0] = (float)raw_acc_gyro_data[4] * gyro_resolution;  // get actual gyro value, this depends on scale being set
@@ -506,12 +433,6 @@ private:
                 destination[2] = ((int16_t)raw_data[5] << 8) | raw_data[4];
             }
         }
-    }
-
-    int16_t read_temperature_data() {
-        uint8_t raw_data[2];                                    // x/y/z gyro register data stored here
-        read_bytes(mpu_i2c_addr, TEMP_OUT_H, 2, &raw_data[0]);  // Read the two raw data registers sequentially into data array
-        return ((int16_t)raw_data[0] << 8) | raw_data[1];       // Turn the MSB and LSB into a 16-bit value
     }
 
     // Function which accumulates gyro and accelerometer data after device initialization. It calculates the average

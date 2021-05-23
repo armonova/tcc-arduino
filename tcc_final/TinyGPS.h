@@ -51,6 +51,8 @@ public:
     GPS_INVALID_HDOP = 0xFFFFFFFF
   };
 
+  void standard_deviation_gps();
+
   static const float GPS_INVALID_F_ANGLE, GPS_INVALID_F_ALTITUDE, GPS_INVALID_F_SPEED;
 
   TinyGPS();
@@ -61,38 +63,22 @@ public:
   // (note: versions 12 and earlier gave lat/long in 100,000ths of a degree.
   void get_position(long *latitude, long *longitude, unsigned long *fix_age = 0);
 
-  // date as ddmmyy, time as hhmmsscc, and age in milliseconds
-  void get_datetime(unsigned long *date, unsigned long *time, unsigned long *age = 0);
-
-  // signed altitude in centimeters (from GPGGA sentence)
-  inline long altitude() { return _altitude; }
-
   // course in last full GPRMC sentence in 100th of a degree
   inline unsigned long course() { return _course; }
 
   // speed in last full GPRMC sentence in 100ths of a knot
   inline unsigned long speed() { return _speed; }
 
-  // satellites used in last full GPGGA sentence
-  inline unsigned short satellites() { return _numsats; }
-
   // horizontal dilution of precision in 100ths
   inline unsigned long hdop() { return _hdop; }
 
   void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
-  void crack_datetime(int *year, byte *month, byte *day, 
-    byte *hour, byte *minute, byte *second, byte *hundredths = 0, unsigned long *fix_age = 0);
-  float f_altitude();
   float f_course();
   float f_speed_knots();
-  float f_speed_mph();
   float f_speed_mps();
-  float f_speed_kmph();
 
   static int library_version() { return _GPS_VERSION; }
-
-  static float distance_between (float lat1, float long1, float lat2, float long2);
-  static float course_to (float lat1, float long1, float lat2, float long2);
+  
   static const char *cardinal(float course);
 
 #ifndef _GPS_NO_STATS
@@ -103,17 +89,11 @@ private:
   enum {_GPS_SENTENCE_GPGGA, _GPS_SENTENCE_GPRMC, _GPS_SENTENCE_OTHER};
 
   // properties
-  unsigned long _time, _new_time;
-  unsigned long _date, _new_date;
   long _latitude, _new_latitude;
   long _longitude, _new_longitude;
-  long _altitude, _new_altitude;
   unsigned long  _speed, _new_speed;
   unsigned long  _course, _new_course;
   unsigned long  _hdop, _new_hdop;
-  unsigned short _numsats, _new_numsats;
-
-  unsigned long _last_time_fix, _new_time_fix;
   unsigned long _last_position_fix, _new_position_fix;
 
   // parsing state variables

@@ -19,7 +19,7 @@ class mpu_conv_class {
     float return_acc_NED(char select);
     float return_acc_XYZ(char select);
     bool update_data();
-    void standard_deviation();
+    void standard_deviation_acc();
     float return_DP_NED(char select);
     
     
@@ -27,9 +27,9 @@ class mpu_conv_class {
     float _acc_N, _acc_E, _acc_D;
     float _acc_x, _acc_y, _acc_z;
 
-    int _calib_pending, _calib_done;
+    char _calib_pending, _calib_done;
 
-    float _DP_acc_acc_N, _DP_acc_acc_E; // desvio padrão da aceleração
+    float _DP_acc_acc_N, _DP_acc_acc_E, _DP_acc_acc_MOD; // desvio padrão da aceleração
 };
 
 #endif
