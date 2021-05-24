@@ -264,9 +264,6 @@ void standard_deviation_gps() {
     float _posi_gps_DP_E = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E);
     _posi_gps_DP_MOD[i] = sqrt((_posi_gps_DP_N * _posi_gps_DP_N) + (_posi_gps_DP_E * _posi_gps_DP_E));
     _vel_gps_DP_MOD[i] = gps.f_speed_mps();
-
-    Serial.print("_posi_gps_DP_MOD[i]: ");
-    Serial.println(_posi_gps_DP_MOD[i], 8);
   
     _sum_posi_gps_MOD += _posi_gps_DP_MOD[i];
     _sum_vel_gps_MOD += _vel_gps_DP_MOD[i];
@@ -274,14 +271,9 @@ void standard_deviation_gps() {
     delay(25); // frequencia de 40Hz
   }
 
-  Serial.print("_sum_posi_gps_MOD: ");
-  Serial.println(_sum_posi_gps_MOD, 8);
-
   float _avg_posi_gps_MOD = _sum_posi_gps_MOD / (float)_acquires;
   float _avg_vel_gps_MOD = _sum_vel_gps_MOD / (float)_acquires;
 
-  Serial.print("_avg_posi_gps_MOD: ");
-  Serial.println(_avg_posi_gps_MOD,8);
   
   float _aux_DP_posi_gps_MOD = 0.0;
   float _aux_DP_vel_gps_MOD = 0.0;
