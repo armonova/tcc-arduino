@@ -38,16 +38,6 @@ float original_posi_gps_N;
 float original_posi_gps_E;
 
 // matriz "Q", de covariância
-/*
-float Q_N[2][2] = {
-  {0, 0},
-  {0, 0}
-};
-float Q_E[2][2] = {
-  {0, 0},
-  {0, 0}
-};
-*/
 float Q_MOD[2][2] = {
   {0.0, 0.0},
   {0.0, 0.0}
@@ -137,23 +127,28 @@ void setup() {
   digitalWrite(CALIB_COV, LOW);
 }
 
+// [linhas][colunas]
+float x_k_ant[2][1] = {
+  { 0.0 },
+  { 0.0 }
+};
 
 void loop() {
   // Variáveis
   bool newGpsData = false;
   float posi_gps_E, posi_gps_N, speed_gps;
-//  
-//  // matriz "A", de estado (0.025 = período de amostragem)
-//  float A[2][2] = {
-//    { 1,  0.025 },
-//    { 0,  1     }
-//  };
-//  
-//  // matriz "B", de entrada
-//  float B[2][1] = {
-//    { 0.000625 },
-//    { 0.025    }
-//  };
+  
+  // matriz "A", de estado (0.025 = período de amostragem)
+  float A[2][2] = {
+    { 1,  0.025 },
+    { 0,  1     }
+  };
+  
+  // matriz "B", de entrada
+  float B[2][1] = {
+    { 0.000625 },
+    { 0.025    }
+  };
   
   // Matriz de estados do eixo North
   float xk_N[2][1] = {
@@ -213,14 +208,16 @@ void loop() {
 
 
     // Matriz "u"
-    float u_N[1] = { mpu_new.return_acc_NED('N')};
-    float u_E[1] = { mpu_new.return_acc_NED('E')};
+    // @TODO: parar de usar matriz aqui
+    float u_N[1] = { (mpu_new.return_acc_NED('N')) };
+    float u_E[1] = { (mpu_new.return_acc_NED('E')) };
+    float u = sqrt( (mpu_new.return_acc_NED('N') * mpu_new.return_acc_NED('N')) + (mpu_new.return_acc_NED('E') * mpu_new.return_acc_NED('E')) );
 
     // Determinação de x_k - evolução dos estados
-//    xk_N[0][0] = ((A[0][0] * x_N[0][0]) + (A[0][1] * x_N[1][0])) + (B[0][0] * u_N[0]);
-//    xk_N[1][0] = ((A[1][0] * x_N[0][0]) + (A[1][1] * x_N[1][0])) + (B[1][0] * u_N[0]);
-//    xk_E[0][0] = ((A[0][0] * x_E[0][0]) + (A[0][1] * x_E[1][0])) + (B[0][0] * u_E[0]);
-//    xk_E[1][0] = ((A[1][0] * x_E[0][0]) + (A[1][1] * x_E[1][0])) + (B[1][0] * u_E[0]);
+    xk_N[0][0] = ((A[0][0] * x_N[0][0]) + (A[0][1] * x_N[1][0])) + (B[0][0] * u_N[0]);
+    xk_N[1][0] = ((A[1][0] * x_N[0][0]) + (A[1][1] * x_N[1][0])) + (B[1][0] * u_N[0]);
+    xk_E[0][0] = ((A[0][0] * x_E[0][0]) + (A[0][1] * x_E[1][0])) + (B[0][0] * u_E[0]);
+    xk_E[1][0] = ((A[1][0] * x_E[0][0]) + (A[1][1] * x_E[1][0])) + (B[1][0] * u_E[0]);
 
     float speedTotal_state = sqrt((xk_E[1][0]*xk_E[1][0]) + (xk_N[1][0]*xk_N[1][0]));
     float posiTotal_state = sqrt((xk_E[0][0]*xk_E[0][0]) + (xk_N[0][0]*xk_N[0][0]));
@@ -230,6 +227,46 @@ void loop() {
     Serial.print(speedTotal_state);
     Serial.print(" ");
     Serial.println(speed_gps);
+
+    /* Nesse ponto do código eu tenho a evolução dos estados do acelerômetro e GPS para 
+     * a determinação da velocidade e da posição.
+     * O próximo passo é a realização do filtro de Kalmn
+     */
+
+    /***************** F I L T R O   D E   K A L M N *****************/
+    // P R E D I Ç  Ã O
+    // passo 1
+
+    // [MATLAB] x_aux = A * x_k_ant + B * u;  
+    float x_aux[2][1] = {
+      { ((A[0][0] * x_k_ant[0][0]) + (A[0][1] * x_k_ant[1][0])) },
+      { ((A[1][0] * x_k_ant[0][0]) + (A[1][1] * x_k_ant[1][0])) }
+    };
+
+    x_aux[0][0] += B[0][0] * u;
+    x_aux[1][0] += B[1][0] * u;
+    
+    // passo 2
+    // [MATLAB] P = A * new_P_ant * A' + Q;
+//    float P[2][2] = {
+//      {},
+//      {}  
+//    }
+    // @TODO: Conferir se eu preciso dessa formula que estava no matlab
+    // autoVal(:,i) = eig(P);
+//    
+//    
+//    // C O R R E Ç Ã O
+//    // passo 3
+//    K = P * C' * inv(C * P * C' + R);
+//    
+//    % passo 4
+//    z = C * x_aux;
+//    y = y_k(:,i);
+//    new_x_k(:,i) = x_aux + K * (C * y - z);
+//    
+//    % passo 5
+//    new_P_ant = (eye(size(Q)) - K * C) * P;
   }
 }
 
