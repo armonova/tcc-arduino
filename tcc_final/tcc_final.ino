@@ -133,6 +133,11 @@ float x_k_ant[2][1] = {
   { 0.0 }
 };
 
+float new_P_ant[2][2] ={
+  {1, 0},
+  {0, 1}
+};
+
 void loop() {
   // Variáveis
   bool newGpsData = false;
@@ -235,7 +240,7 @@ void loop() {
 
     /***************** F I L T R O   D E   K A L M N *****************/
     // P R E D I Ç  Ã O
-    // passo 1
+    // passo 1 - @TODO: Refazer utilizando as funções de multiplicação de matrizes
 
     // [MATLAB] x_aux = A * x_k_ant + B * u;  
     float x_aux[2][1] = {
@@ -246,19 +251,36 @@ void loop() {
     x_aux[0][0] += B[0][0] * u;
     x_aux[1][0] += B[1][0] * u;
     
-    // passo 2
+    // passo 2 - @TODO: Refazer utilizando as funções de multiplicação de matrizes
     // [MATLAB] P = A * new_P_ant * A' + Q;
-//    float P[2][2] = {
-//      {},
-//      {}  
-//    }
-    // @TODO: Conferir se eu preciso dessa formula que estava no matlab
-    // autoVal(:,i) = eig(P);
-//    
-//    
-//    // C O R R E Ç Ã O
-//    // passo 3
-//    K = P * C' * inv(C * P * C' + R);
+    float P[2][2] = {
+      { (A[0][0] * new_P_ant[0][0] + A[0][1] * new_P_ant[1][0]), (A[0][0] * new_P_ant[0][1] + A[0][1] * new_P_ant[1][1]) },
+      { (A[1][0] * new_P_ant[0][0] + A[1][1] * new_P_ant[1][0]), (A[1][0] * new_P_ant[0][1] + A[1][1] * new_P_ant[1][1]) }
+    }; // A * new_P_ant
+
+    P[0][0] = (P[0][0] * A[0][0] + P[0][1] * A[0][1]) + Q_MOD[0][0];
+    P[0][1] = (P[0][0] * A[1][0] + P[0][1] * A[1][1]) + Q_MOD[0][1];
+
+    P[1][0] = (P[1][0] * A[0][0] + P[1][1] * A[0][1]) + Q_MOD[1][0];
+    P[1][1] = (P[1][0] * A[1][0] + P[1][1] * A[1][1]) + Q_MOD[1][1];
+    // (P * A') + Q - Obs atenção para a multiplicação da matriz transposta
+
+    // C O R R E Ç Ã O
+    // passo 3
+    // K = P * C' * inv(C * P * C' + R);
+    float C[2][2] = {
+      {1, 0},
+      {0, 1}
+    };
+    float K[2][2];
+    float aux[2][2];
+    multiplyMatrix_2x2_2x2(C, P, aux);
+    multiplyMatrix_2x2_2x2(aux, C, aux);
+    aux[0][0] += R_MOD[0][0];
+    aux[0][1] += R_MOD[0][1]; 
+
+    aux[1][0] += R_MOD[1][0];
+    aux[1][1] += R_MOD[1][1];
 //    
 //    % passo 4
 //    z = C * x_aux;
@@ -359,7 +381,7 @@ void standard_deviation_acc() {
     _auxE_DP_acc_acc_MOD += (_acc_acc_DP_MOD[i] - _avg_acc_acc_MOD) * (_acc_acc_DP_MOD[i] - _avg_acc_acc_MOD);
   }
   
-  float _DP_acc_acc_MOD = sqrt(_auxE_DP_acc_acc_MOD / (float)_acquires);
+  float _DP_acc_acc_MOD = sqrt(_auxE_DP_acc_acc_MOD / (float)_acquires); // @TODO: verificar remoção da raiz 
 
   float DP_posi_MOD = 0.0003125 * _DP_acc_acc_MOD; // 0.0003125 = (0.025 * 0.025)/2
   float DP_vel_MOD = 0.025 * _DP_acc_acc_MOD;
@@ -367,4 +389,19 @@ void standard_deviation_acc() {
   // Determinação da matriz Q de covariância
   Q_MOD[0][0] = DP_posi_MOD * DP_posi_MOD;
   Q_MOD[1][1] = DP_vel_MOD * DP_vel_MOD;
+}
+
+void multiplyMatrix_2x2_2x2(float M1[2][2], float M2[2][2], float returnMatriz[2][2]) {
+    returnMatriz[0][0] = (M1[0][0] * M2[0][0]) + (M1[0][1] * M2[1][0]);
+    returnMatriz[0][1] = (M1[0][0] * M2[0][1]) + (M1[0][1] * M2[1][1]);
+    
+    returnMatriz[1][0] = (M1[1][0] * M2[0][0]) + (M1[1][1] * M2[1][0]);
+    returnMatriz[1][1] = (M1[1][0] * M2[0][1]) + (M1[1][1] * M2[1][1]);
+    return;
+}
+
+void multiplyMatrix_2x2_2x1(float M1[2][2], float M2[2][1], float returnMatriz[2][1]) {
+    returnMatriz[0][0] = (M1[0][0] * M2[0][0]) + (M1[0][1] * M2[1][0]);
+    returnMatriz[1][0] = (M1[1][0] * M2[0][0]) + (M1[1][1] * M2[1][0]);
+    return;
 }

@@ -46,7 +46,7 @@ void setup() {
   digitalWrite(CALIB_DONE, LOW);
   digitalWrite(CALIB_COV, LOW);
 
-  Serial.begin(115200); // Inicializa a porta serial
+  Serial.begin(9600); // Inicializa a porta serial
 
 
   // Inicializa a calibração da MPU
