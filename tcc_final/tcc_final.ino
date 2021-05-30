@@ -281,6 +281,8 @@ void loop() {
 
     aux[1][0] += R_MOD[1][0];
     aux[1][1] += R_MOD[1][1];
+
+    // @TODO falta calulcar a inversa 
 //    
 //    % passo 4
 //    z = C * x_aux;
@@ -403,5 +405,14 @@ void multiplyMatrix_2x2_2x2(float M1[2][2], float M2[2][2], float returnMatriz[2
 void multiplyMatrix_2x2_2x1(float M1[2][2], float M2[2][1], float returnMatriz[2][1]) {
     returnMatriz[0][0] = (M1[0][0] * M2[0][0]) + (M1[0][1] * M2[1][0]);
     returnMatriz[1][0] = (M1[1][0] * M2[0][0]) + (M1[1][1] * M2[1][0]);
+    return;
+}
+
+void inversa(float M[2][2], float retunInv[2][2]) {
+    retunInv[0][0] = (-M[1][1]) / ((M[1][0] * M[0][1]) - (M[0][0] * M[1][1]));  // a
+    retunInv[0][1] = (M[0][1]) / ((M[1][0] * M[0][1]) - (M[0][0] * M[1][1]));   // b
+    
+    retunInv[1][0] = (-M[1][0]) / ((M[1][1] * M[0][0]) - (M[0][1] * M[1][0]));  // c
+    retunInv[1][1] = (M[0][0]) / ((M[1][1] * M[0][0]) - (M[0][1] * M[1][0]));   // d
     return;
 }
