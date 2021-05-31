@@ -61,9 +61,6 @@ public:
   // (note: versions 12 and earlier gave lat/long in 100,000ths of a degree.
   void get_position(long *latitude, long *longitude, unsigned long *fix_age = 0);
 
-  // speed in last full GPRMC sentence in 100ths of a knot
-  inline unsigned long speed() { return _speed; }
-
   void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
   float f_speed_knots();
   float f_speed_mps();

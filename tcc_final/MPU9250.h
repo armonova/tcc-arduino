@@ -248,10 +248,6 @@ public:
     float getMagY() const { return m[1]; }
     float getMagZ() const { return m[2]; }
 
-    void selectFilter(QuatFilterSel sel) {
-        quat_filter.select_filter(sel);
-    }
-
 private:
     void initMPU9250() {
         acc_resolution = get_acc_resolution(setting.accel_fs_sel);
