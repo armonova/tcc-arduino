@@ -38,7 +38,6 @@ bool mpu_conv_class::config_mpu() {
     // Serial.println("Please leave the device still on the flat plane.");
     digitalWrite(_calib_pending, HIGH);
     digitalWrite(_calib_done, LOW);
-    mpu.verbose(true);
     delay(5000);
     mpu.calibrateAccelGyro();
 
@@ -48,9 +47,7 @@ bool mpu_conv_class::config_mpu() {
     digitalWrite(_calib_done, HIGH);
     delay(5000);
     mpu.calibrateMag();
-
-    mpu.verbose(false);
-    
+        
     return true;
 }
 
@@ -61,13 +58,10 @@ void mpu_conv_class::make_conversion(){
                        { 0.0, 0.0, 0.0 } };
   // converte para angulos em radianos
   // angulos de Euler
-//  _phi = mpu.getEulerX() * (PI/180.0); // angulo entre o eixo X e a reta nodal
-//  _theta = mpu.getEulerY() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
-//  _psi = mpu.getEulerZ() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
   // angulos da medida do magnetómetro - teste
-  _phi = mpu.getRoll() * (PI/180.0); // angulo entre o eixo X e a reta nodal
-  _theta = mpu.getPitch() * (PI/180.0); // angulo entre o eixo X' e a reta nodal
-  _psi = mpu.getYaw() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'
+  _phi = mpu.getRoll() * (PI/180.0); // angulo entre o eixo X e a reta nodal      // getEulerX
+  _theta = mpu.getPitch() * (PI/180.0); // angulo entre o eixo X' e a reta nodal  // getEulerY
+  _psi = mpu.getYaw() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'       // getEulerZ
   
   // primeira linha da matriz de _rotação
   _rot[0][0] = cos(_theta) * cos(_psi);
@@ -83,15 +77,11 @@ void mpu_conv_class::make_conversion(){
   _rot[2][0] = -sin(_theta);
   _rot[2][1] = sin(_phi) * cos(_theta);
   _rot[2][2] = cos(_phi) * cos(_theta);
-  
-  float _acc_x = mpu.getAccX();
-  float _acc_y = mpu.getAccY();
-  float _acc_z = mpu.getAccZ();
-  
+
   // multiplicação de matrizes
-  _acc_N = (_acc_x * _rot[0][0]) + (_acc_y * _rot[0][1]) + (_acc_z * _rot[0][2]);
-  _acc_E = (_acc_x * _rot[1][0]) + (_acc_y * _rot[1][1]) + (_acc_z * _rot[1][2]);
-  _acc_D = (_acc_x * _rot[2][0]) + (_acc_y * _rot[2][1]) + (_acc_z * _rot[2][2]); 
+  _acc_N = (mpu.getAccX() * _rot[0][0]) + (mpu.getAccY() * _rot[0][1]) + (mpu.getAccZ() * _rot[0][2]);
+  _acc_E = (mpu.getAccX() * _rot[1][0]) + (mpu.getAccY() * _rot[1][1]) + (mpu.getAccZ() * _rot[1][2]);
+  _acc_D = (mpu.getAccX() * _rot[2][0]) + (mpu.getAccY() * _rot[2][1]) + (mpu.getAccZ() * _rot[2][2]); 
 }
 
 bool mpu_conv_class::update_data() {
@@ -99,7 +89,12 @@ bool mpu_conv_class::update_data() {
 }
 
 float mpu_conv_class::return_acc_NED(char select) {
-  if (select == 'N') return _acc_N;
-  if (select == 'E') return _acc_E;
-  if (select == 'D') return _acc_D;
+  switch(select) {
+    case 'N':
+      return _acc_N;
+    case 'E':
+      return _acc_E;
+    case 'D':
+      return _acc_D;
+  }
 }

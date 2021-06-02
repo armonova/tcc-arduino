@@ -23,6 +23,14 @@
 #define GPS_TX 3
 #define Serial_Baud 9600
 
+
+// matriz "B", de entrada
+/* 
+ * float B[2] = { 0.000625, 0.025 }; 
+ */
+#define B_0 0.000625
+#define B_1 0.25
+
 // Classe para conversão da biblioteca do MPU
 mpu_conv_class mpu_new(CALIB_PENDING, CALIB_DONE);
 
@@ -63,7 +71,7 @@ void setup() {
    * MPU
    */
   // Inicializa a calibração da MPU
-  if (mpu_new.config_mpu() || true) {
+  if (mpu_new.config_mpu()) {
     // Se a calibração foi bem sucedida
     digitalWrite(CALIB_PENDING, LOW);
     digitalWrite(CALIB_DONE, HIGH); 
@@ -80,19 +88,6 @@ void setup() {
   delay(5000); // espera 3 segundos para parar a placa
   standard_deviation_acc();
   standard_deviation_gps(); 
-
-  /*
-  Serial.println("Matriz Q");
-  Serial.print("Q[0][0]: ");
-  Serial.println(Q_MOD[0][0], 10);
-  Serial.print("Q[1][1]: ");
-  Serial.println(Q_MOD[1][1], 10);
-  Serial.println("");
-  Serial.print("R[0][0]: ");
-  Serial.println(R_MOD[0][0], 10);
-  Serial.print("R[1][1]: ");
-  Serial.println(R_MOD[1][1], 10);
-  */
   // Matriz de covariância calculada
 
   /*
@@ -112,8 +107,7 @@ void setup() {
     }
   }
   float posi_gps_E, posi_gps_N;
-  unsigned long age;
-  gps.f_get_position(&posi_gps_E, &posi_gps_N, &age);
+  gps.f_get_position(&posi_gps_E, &posi_gps_N);
   // Armazena as posições no eixo North e East no momento que é ligado o dispositivo 
   original_posi_gps_N = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N);
   original_posi_gps_E = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E);
@@ -141,24 +135,20 @@ void loop() {
   
   // matriz "A", de estado (0.025 = período de amostragem)
   float A[2][2] = {
-    { 1,  0.025 },
-    { 0,  1     }
+    { 1.0,  0.025 },
+    { 0.0,  0.1   }
   };
-  
-  // matriz "B", de entrada
-  float B[2] = { 0.000625, 0.025 };
   
   // Matriz de estados 
   // gps
   float yk[2] = { 0 , 0 };
   
-  static uint32_t prev_ms = millis();
   // Faz uma medição a cada 25 ms = 40Hz ~ 45Hz
   // @TODO: Conferir esse período
-  while(millis() < prev_ms + 25);
-  prev_ms = millis();
+  delay(25);
   
   // Leitura do GPS
+  // TODO: arrumar um jeito de não travar o programa aqui (interrupção ?)
   while (gpsSerial.available()) {
     char c = gpsSerial.read();
     if (gps.encode(c)) // Atribui true para newData caso novos dados sejam recebidos
@@ -166,8 +156,7 @@ void loop() {
   }
   if (newGpsData) {
     // Atualiza os dados do GPS
-    unsigned long age;
-    gps.f_get_position(&posi_gps_E, &posi_gps_N, &age);
+    gps.f_get_position(&posi_gps_E, &posi_gps_N);
     if (TinyGPS::GPS_INVALID_F_SPEED && TinyGPS::GPS_INVALID_F_ANGLE) {
       posi_gps_E = posi_gps_E - original_posi_gps_E;
       posi_gps_N = posi_gps_N - original_posi_gps_N;
@@ -195,16 +184,9 @@ void loop() {
     float u = sqrt( (mpu_new.return_acc_NED('N') * mpu_new.return_acc_NED('N')) + (mpu_new.return_acc_NED('E') * mpu_new.return_acc_NED('E')) );
 
     // Determinação de x_k - evolução dos estados
-    xk[0] = ((A[0][0] * xk_ant[0]) + (A[0][1] * xk_ant[1])) + (B[0] * u); // posição
-    xk[1] = ((A[1][0] * xk_ant[0]) + (A[1][1] * xk_ant[1])) + (B[1] * u); // velocidade
+    xk[0] = ((A[0][0] * xk_ant[0]) + (A[0][1] * xk_ant[1])) + (B_0 * u); // posição
+    xk[1] = ((A[1][0] * xk_ant[0]) + (A[1][1] * xk_ant[1])) + (B_1 * u); // velocidade
     
-    /*
-      Serial.print(0);
-      Serial.print(" ");
-      Serial.print(speedTotal_state);
-      Serial.print(" ");
-      Serial.println(speed_gps);
-    */
     
     /* Nesse ponto do código eu tenho a evolução dos estados do acelerômetro e GPS para 
      * a determinação da velocidade e da posição.
@@ -224,8 +206,8 @@ void loop() {
     float xk_aux[2];
     multiplyMatrix_2x2_2x1(A, xk_ant, xk_aux);
 
-    xk_aux[0] += B[0] * u;
-    xk_aux[1] += B[1] * u;
+    xk_aux[0] += B_0 * u;
+    xk_aux[1] += B_1 * u;
     
     // passo 2
     // [MATLAB] P = A * new_P_ant * A' + Q;
@@ -287,10 +269,6 @@ void loop() {
    
     // passo 5
     // new_P_ant = (eye(size(Q)) - K * C) * P;
-    float identity[2][2] = {
-      { 1, 0 },
-      { 0, 1 }
-    };
     float P_aux[2][2];
     multiplyMatrix_2x2_2x2(K, C, P_aux);
     P_aux[0][0] = 1 - P_aux[0][0];
@@ -299,11 +277,11 @@ void loop() {
     P_aux[1][1] = 1 - P_aux[1][1];
     multiplyMatrix_2x2_2x2(P_aux, P, new_P_ant);
 
-    Serial.print(0);
+    Serial.print(xk_kalman[1]);
     Serial.print(" ");
-    Serial.print(xk_kalman[0]);
+    Serial.print(xk[1]);
     Serial.print(" ");
-    Serial.println(xk_kalman[1]);
+    Serial.println(yk[1]);
   }
 }
 
@@ -331,8 +309,7 @@ void standard_deviation_gps() {
       }
     }
     float posi_gps_E, posi_gps_N;
-    unsigned long age;
-    gps.f_get_position(&posi_gps_E, &posi_gps_N, &age);
+    gps.f_get_position(&posi_gps_E, &posi_gps_N);
     // Armazena as posições no eixo North e East no momento que é ligado o dispositivo 
     float _posi_gps_DP_N = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N);
     float _posi_gps_DP_E = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E);
@@ -356,9 +333,6 @@ void standard_deviation_gps() {
     _aux_DP_posi_gps_MOD += (_posi_gps_DP_MOD[i] - _avg_posi_gps_MOD) * (_posi_gps_DP_MOD[i] - _avg_posi_gps_MOD);
     _aux_DP_vel_gps_MOD += (_vel_gps_DP_MOD[i] - _avg_vel_gps_MOD) * (_vel_gps_DP_MOD[i] - _avg_vel_gps_MOD);
   }
-
-  Serial.print("_aux_DP_posi_gps_MOD: ");
-  Serial.println(_aux_DP_posi_gps_MOD, 8);
 
   // Determina a matriz de covariância R (GPS)
   R_MOD[0][0] = _aux_DP_posi_gps_MOD * _aux_DP_posi_gps_MOD;

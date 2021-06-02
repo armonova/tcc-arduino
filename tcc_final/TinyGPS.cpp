@@ -36,11 +36,6 @@ TinyGPS::TinyGPS()
   ,  _term_number(0)
   ,  _term_offset(0)
   ,  _gps_data_good(false)
-#ifndef _GPS_NO_STATS
-  ,  _encoded_characters(0)
-  ,  _good_sentences(0)
-  ,  _failed_checksum(0)
-#endif
 {
   _term[0] = '\0';
 }
@@ -53,9 +48,6 @@ bool TinyGPS::encode(char c)
 {
   bool valid_sentence = false;
 
-#ifndef _GPS_NO_STATS
-  ++_encoded_characters;
-#endif
   switch(c)
   {
   case ',': // term terminators
@@ -90,15 +82,6 @@ bool TinyGPS::encode(char c)
 
   return valid_sentence;
 }
-
-#ifndef _GPS_NO_STATS
-void TinyGPS::stats(unsigned long *chars, unsigned short *sentences, unsigned short *failed_cs)
-{
-  if (chars) *chars = _encoded_characters;
-  if (sentences) *sentences = _good_sentences;
-  if (failed_cs) *failed_cs = _failed_checksum;
-}
-#endif
 
 //
 // internal utilities
@@ -164,9 +147,6 @@ bool TinyGPS::term_complete()
     {
       if (_gps_data_good)
       {
-#ifndef _GPS_NO_STATS
-        ++_good_sentences;
-#endif
         _last_position_fix = _new_position_fix;
 
         switch(_sentence_type)
@@ -185,11 +165,6 @@ bool TinyGPS::term_complete()
         return true;
       }
     }
-
-#ifndef _GPS_NO_STATS
-    else
-      ++_failed_checksum;
-#endif
     return false;
   }
 
@@ -267,10 +242,10 @@ void TinyGPS::get_position(long *latitude, long *longitude, unsigned long *fix_a
 
 // date as ddmmyy, time as hhmmsscc, and age in milliseconds
 
-void TinyGPS::f_get_position(float *latitude, float *longitude, unsigned long *fix_age)
+void TinyGPS::f_get_position(float *latitude, float *longitude)
 {
   long lat, lon;
-  get_position(&lat, &lon, fix_age);
+  get_position(&lat, &lon);
   *latitude = lat == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : (lat / 1000000.0);
   *longitude = lat == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : (lon / 1000000.0);
 }

@@ -89,9 +89,6 @@ class MPU9250_ {
     float mag_bias[3] {0., 0., 0.};  // mag calibration value in MAG_OUTPUT_BITS: 16BITS
     float mag_scale[3] {1., 1., 1.};
 
-    // Self Test
-    float self_test_result[6] {0.f};  // holds results of gyro and accelerometer self test
-
     // IMU Data
     float a[3] {0.f, 0.f, 0.f};
     float g[3] {0.f, 0.f, 0.f};
@@ -103,7 +100,6 @@ class MPU9250_ {
     // Other settings
     bool has_connected {false};
     bool b_ahrs {true};
-    bool b_verbose {false};
 
     // I2C
     WireType* wire;
@@ -130,25 +126,16 @@ public:
             if (isConnectedAK8963())
                 initAK8963();
             else {
-                if (b_verbose)
-                    Serial.println("Could not connect to AK8963");
                 has_connected = false;
                 return false;
             }
         } else {
-            if (b_verbose)
-                Serial.println("Could not connect to MPU9250");
             has_connected = false;
             return false;
         }
         has_connected = true;
         return true;
     }
-
-    void verbose(const bool b) {
-        b_verbose = b;
-    }
-
     void ahrs(const bool b) {
         b_ahrs = b;
     }
@@ -168,10 +155,6 @@ public:
 
     bool isConnectedMPU9250() {
         byte c = read_byte(mpu_i2c_addr, WHO_AM_I_MPU9250);
-        if (b_verbose) {
-            Serial.print("MPU9250 WHO AM I = ");
-            Serial.println(c, HEX);
-        }
         bool b = (c == MPU9250_WHOAMI_DEFAULT_VALUE);
         b |= (c == MPU9255_WHOAMI_DEFAULT_VALUE);
         b |= (c == MPU6500_WHOAMI_DEFAULT_VALUE);
@@ -180,10 +163,6 @@ public:
 
     bool isConnectedAK8963() {
         byte c = read_byte(AK8963_ADDRESS, AK8963_WHO_AM_I);
-        if (b_verbose) {
-            Serial.print("AK8963 WHO AM I = ");
-            Serial.println(c, HEX);
-        }
         return (c == AK8963_WHOAMI_DEFAULT_VALUE);
     }
 
@@ -221,6 +200,7 @@ public:
         float mn = +m[1];
         float me = -m[0];
         float md = +m[2];
+        // essa parte é necessária
         quat_filter.update(an, ae, ad, gn, ge, gd, mn, me, md, q);
 
         if (!b_ahrs) {
@@ -332,16 +312,6 @@ private:
         // and enable continuous mode data acquisition MAG_MODE (bits [3:0]), 0010 for 8 Hz and 0110 for 100 Hz sample rates
         write_byte(AK8963_ADDRESS, AK8963_CNTL, (uint8_t)setting.mag_output_bits << 4 | MAG_MODE);  // Set magnetometer data resolution and sample ODR
         delay(10);
-
-        if (b_verbose) {
-            Serial.println("Mag Factory Calibration Values: ");
-            Serial.print("X-Axis sensitivity offset value ");
-            Serial.println(mag_bias_factory[0], 2);
-            Serial.print("Y-Axis sensitivity offset value ");
-            Serial.println(mag_bias_factory[1], 2);
-            Serial.print("Z-Axis sensitivity offset value ");
-            Serial.println(mag_bias_factory[2], 2);
-        }
     }
 
     void update_euler(float qw, float qx, float qy, float qz) {
@@ -585,34 +555,12 @@ private:
         setting.mag_output_bits = MAG_OUTPUT_BITS::M16BITS;
         initAK8963();
         collect_mag_data_to(mag_bias, mag_scale);
-
-        if (b_verbose) {
-            Serial.println("Mag Calibration done!");
-
-            Serial.println("AK8963 mag biases (mG)");
-            Serial.print(mag_bias[0]);
-            Serial.print(", ");
-            Serial.print(mag_bias[1]);
-            Serial.print(", ");
-            Serial.print(mag_bias[2]);
-            Serial.println();
-            Serial.println("AK8963 mag scale (mG)");
-            Serial.print(mag_scale[0]);
-            Serial.print(", ");
-            Serial.print(mag_scale[1]);
-            Serial.print(", ");
-            Serial.print(mag_scale[2]);
-            Serial.println();
-        }
-
         // restore MAG_OUTPUT_BITS
         setting.mag_output_bits = mag_output_bits_cache;
         initAK8963();
     }
 
     void collect_mag_data_to(float* m_bias, float* m_scale) {
-        if (b_verbose)
-            Serial.println("Mag Calibration: Wave device in a figure eight until done!");
         delay(4000);
 
         // shoot for ~fifteen seconds of mag data
@@ -634,18 +582,6 @@ private:
             }
             if (MAG_MODE == 0x02) delay(135);  // at 8 Hz ODR, new mag data is available every 125 ms
             if (MAG_MODE == 0x06) delay(12);   // at 100 Hz ODR, new mag data is available every 10 ms
-        }
-
-        if (b_verbose) {
-            Serial.println("mag x min/max:");
-            Serial.println(mag_max[0]);
-            Serial.println(mag_min[0]);
-            Serial.println("mag y min/max:");
-            Serial.println(mag_max[1]);
-            Serial.println(mag_min[1]);
-            Serial.println("mag z min/max:");
-            Serial.println(mag_max[2]);
-            Serial.println(mag_min[2]);
         }
 
         // Get hard iron correction

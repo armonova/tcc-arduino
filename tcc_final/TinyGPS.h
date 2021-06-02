@@ -38,7 +38,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #define _GPS_KMPH_PER_KNOT 1.852
 #define _GPS_MILES_PER_METER 0.00062137112
 #define _GPS_KM_PER_METER 0.001
-// #define _GPS_NO_STATS
 
 class TinyGPS
 {
@@ -61,13 +60,9 @@ public:
   // (note: versions 12 and earlier gave lat/long in 100,000ths of a degree.
   void get_position(long *latitude, long *longitude, unsigned long *fix_age = 0);
 
-  void f_get_position(float *latitude, float *longitude, unsigned long *fix_age = 0);
+  void f_get_position(float *latitude, float *longitude);
   float f_speed_knots();
   float f_speed_mps();
-
-#ifndef _GPS_NO_STATS
-  void stats(unsigned long *chars, unsigned short *good_sentences, unsigned short *failed_cs);
-#endif
 
 private:
   enum {_GPS_SENTENCE_GPGGA, _GPS_SENTENCE_GPRMC, _GPS_SENTENCE_OTHER};
@@ -86,14 +81,6 @@ private:
   byte _term_number;
   byte _term_offset;
   bool _gps_data_good;
-
-#ifndef _GPS_NO_STATS
-  // statistics
-  unsigned long _encoded_characters;
-  unsigned short _good_sentences;
-  unsigned short _failed_checksum;
-  unsigned short _passed_checksum;
-#endif
 
   // internal utilities
   int from_hex(char a);
