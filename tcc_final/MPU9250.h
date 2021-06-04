@@ -63,9 +63,9 @@ struct MPU9250Setting {
     MAG_OUTPUT_BITS mag_output_bits {MAG_OUTPUT_BITS::M16BITS};
     FIFO_SAMPLE_RATE fifo_sample_rate {FIFO_SAMPLE_RATE::SMPL_200HZ};
     uint8_t gyro_fchoice {0x03};
-    GYRO_DLPF_CFG gyro_dlpf_cfg {GYRO_DLPF_CFG::DLPF_41HZ};
+    GYRO_DLPF_CFG gyro_dlpf_cfg {GYRO_DLPF_CFG::DLPF_10HZ};
     uint8_t accel_fchoice {0x01};
-    ACCEL_DLPF_CFG accel_dlpf_cfg {ACCEL_DLPF_CFG::DLPF_45HZ};
+    ACCEL_DLPF_CFG accel_dlpf_cfg {ACCEL_DLPF_CFG::DLPF_10HZ};
 };
 
 template <typename WireType>
