@@ -18,7 +18,10 @@
 
 #define CALIB_PENDING 13  // Led Vermelho
 #define CALIB_DONE 8      // Led Verde
-#define CALIB_COV 7  // Led Amarelo - Calibração Matrizes de covariância
+#define CALIB_COV 7       // Led Amarelo - Calibração Matrizes de covariância
+#define STOPPED 13        // LED vermelho - indica que a pessoa parou
+#define MOVING 8          // LED Verde - Pessoa em movimento
+#define OFFSET 0.0
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
@@ -133,7 +136,16 @@ float yk[2] = { 0.0 , 0.0 };
 float tempo = 0.0;
 float contador;
 
+int calibration_measurements = 10;
+int loop_count = 0;
+float threshold_array[10];
+float threshold;
+bool calibration_pending= true;
+
 void loop() {
+  digitalWrite(CALIB_PENDING, HIGH);
+  digitalWrite(CALIB_DONE, HIGH);
+  digitalWrite(CALIB_COV, HIGH);
   /*
    * TESTE para deixar as matriz com os mesmos pesos
    * Dessa maneira o resuldado do filtro deve ser uma combinação entre as duas medições 
@@ -142,6 +154,17 @@ void loop() {
 //  Q_MOD[1][1] = 0.1;
 //  R_MOD[0][0] = 0.1;
 //  R_MOD[1][1] = 0.1;
+  /*
+  Serial.print("Q_MOD[0][0]: ");
+  Serial.println(Q_MOD[0][0], 12);
+  Serial.print("Q_MOD[1][1]: ");
+  Serial.println(Q_MOD[1][1], 12);
+  Serial.print("R_MOD[0][0]: ");
+  Serial.println(R_MOD[0][0], 12);
+  Serial.print("R_MOD[1][1]: ");
+  Serial.println(R_MOD[1][1], 12);
+  */
+  
   
   // Variáveis
   bool newGpsData = false;
@@ -264,8 +287,27 @@ void loop() {
   float aux_inverse[2][2];
   inverseMatrix(aux, aux_inverse); // = inv(C * P * C' + R)
 
+  Serial.print("\n");
+  Serial.print("aux[0][0]: ");
+  Serial.println(aux_inverse[0][0], 12);
+  Serial.print("aux[0][1]: ");
+  Serial.println(aux_inverse[0][1], 12);
+  Serial.print("aux[1][0]: ");
+  Serial.println(aux[1][0], 12);
+  Serial.print("aux[1][1]: ");
+  Serial.println(aux[1][1], 12);
+  Serial.print("\n");
+
   multiplyMatrix_2x2_2x2(P, C_transp, K);
-  multiplyMatrix_2x2_2x2(K, aux_inverse, K);  
+  Serial.print("P[0][0]: ");
+  Serial.println(P[0][0], 12);
+  Serial.print("P[0][1]: ");
+  Serial.println(P[0][1], 12);
+  Serial.print("P[1][0]: ");
+  Serial.println(P[1][0], 12);
+  Serial.print("P[1][1]: ");
+  Serial.println(P[1][1], 12);
+  multiplyMatrix_2x2_2x2(K, aux_inverse, K);
   
   // % passo 4
   // [MATLAB]
@@ -279,6 +321,11 @@ void loop() {
   cXy[0] -= z[0];
   cXy[1] -= z[1];
   multiplyMatrix_2x2_2x1(K, cXy, cXy);
+
+  Serial.print("xk_aux[1]: ");
+  Serial.println(xk_aux[1], 12);
+  Serial.print("cXy[1]: ");
+  Serial.println(cXy[1], 12);
   xk_kalman[0] = xk_aux[0] + cXy[0]; // posição com o filtro de kalman
   xk_kalman[1] = xk_aux[1] + cXy[1]; // velocidade com o filtro de kalman
  
@@ -297,6 +344,35 @@ void loop() {
   Serial.print(xk[1]);        // acelerometro | vermelho
   Serial.print(" ");
   Serial.println(yk[1]);      // gps | verde
+
+  if (calibration_pending) {
+    threshold_array[loop_count] = xk_kalman[1];
+
+    if (loop_count > calibration_measurements) {
+      float sum_aux = 0;
+      for (int a = 0; a < calibration_measurements; a++) {
+        sum_aux += threshold_array[a];
+      }
+      threshold = sum_aux / calibration_measurements;
+      
+      calibration_pending = false;
+      digitalWrite(CALIB_PENDING, LOW);
+      digitalWrite(CALIB_DONE, LOW);
+      digitalWrite(CALIB_COV, LOW);
+      
+    }
+    loop_count++;
+  } else {
+    if (xk_kalman[1] > (threshold + OFFSET) || xk_kalman[1] < (threshold - OFFSET)) {
+      digitalWrite(STOPPED, LOW);
+      digitalWrite(MOVING, HIGH);
+    } else {
+      digitalWrite(STOPPED, HIGH);
+      digitalWrite(MOVING, LOW);
+    }
+  }
+  
+  
 }
 
 
