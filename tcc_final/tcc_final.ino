@@ -21,7 +21,7 @@
 #define CALIB_COV 7       // Led Amarelo - Calibração Matrizes de covariância
 #define STOPPED 13        // LED vermelho - indica que a pessoa parou
 #define MOVING 8          // LED Verde - Pessoa em movimento
-#define OFFSET 0.0
+#define OFFSET 0.15
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
@@ -61,10 +61,10 @@ void setup() {
   // Inicia os leds como desligados  
   digitalWrite(CALIB_PENDING, LOW);
   digitalWrite(CALIB_DONE, LOW);
-  digitalWrite(CALIB_COV, LOW);
+  digitalWrite(CALIB_COV, LOW);  
 
   Serial.begin(9600); // Inicializa a porta serial
-
+  
   gpsSerial.begin(Serial_Baud); // inicializa o GPS
 
   /*
@@ -117,6 +117,10 @@ void setup() {
   
   digitalWrite(CALIB_PENDING, LOW);
   digitalWrite(CALIB_COV, LOW);
+
+  digitalWrite(CALIB_PENDING, HIGH);
+  digitalWrite(CALIB_DONE, HIGH);
+  digitalWrite(CALIB_COV, HIGH);
 }
 
 // [linhas][colunas]
@@ -143,9 +147,6 @@ float threshold;
 bool calibration_pending= true;
 
 void loop() {
-  digitalWrite(CALIB_PENDING, HIGH);
-  digitalWrite(CALIB_DONE, HIGH);
-  digitalWrite(CALIB_COV, HIGH);
   /*
    * TESTE para deixar as matriz com os mesmos pesos
    * Dessa maneira o resuldado do filtro deve ser uma combinação entre as duas medições 
@@ -236,7 +237,7 @@ void loop() {
    *****************************************************************/
 
   /************************ P R E D I Ç Ã O ************************/
-  // passo 1 - @TODO: Refazer utilizando as funções de multiplicação de matrizes
+  // passo 1
 
   // [MATLAB] xk_aux = A * xk_ant + B * u;
   xk_ant[0] = xk_kalman[0];
@@ -250,11 +251,12 @@ void loop() {
   // passo 2
   // [MATLAB] P = A * new_P_ant * A' + Q;
   float P[2][2];
+  float P_aux_aux[2][2];
   
-  multiplyMatrix_2x2_2x2(A, new_P_ant, P); // A * new_P_ant
+  multiplyMatrix_2x2_2x2(A, new_P_ant, P_aux_aux); // A * new_P_ant
   float A_trasnp[2][2];
   transposedMatrix(A, A_trasnp);
-  multiplyMatrix_2x2_2x2(P, A_trasnp, P); // (A * new_P_ant) * A'
+  multiplyMatrix_2x2_2x2(P_aux_aux, A_trasnp, P); // (A * new_P_ant) * A'
 
   // (A * new_P_ant * A') + Q
   P[0][0] += Q_MOD[0][0];
@@ -275,9 +277,11 @@ void loop() {
   transposedMatrix(C, C_transp);
   
   float K[2][2];
+  float K_aux[2][2];
   float aux[2][2];
-  multiplyMatrix_2x2_2x2(C, P, aux);
-  multiplyMatrix_2x2_2x2(aux, C_transp, aux);
+  float aux_aux[2][2];
+  multiplyMatrix_2x2_2x2(C, P, aux_aux);
+  multiplyMatrix_2x2_2x2(aux_aux, C_transp, aux);
   aux[0][0] += R_MOD[0][0];
   aux[0][1] += R_MOD[0][1]; 
 
@@ -287,27 +291,8 @@ void loop() {
   float aux_inverse[2][2];
   inverseMatrix(aux, aux_inverse); // = inv(C * P * C' + R)
 
-  Serial.print("\n");
-  Serial.print("aux[0][0]: ");
-  Serial.println(aux_inverse[0][0], 12);
-  Serial.print("aux[0][1]: ");
-  Serial.println(aux_inverse[0][1], 12);
-  Serial.print("aux[1][0]: ");
-  Serial.println(aux[1][0], 12);
-  Serial.print("aux[1][1]: ");
-  Serial.println(aux[1][1], 12);
-  Serial.print("\n");
-
-  multiplyMatrix_2x2_2x2(P, C_transp, K);
-  Serial.print("P[0][0]: ");
-  Serial.println(P[0][0], 12);
-  Serial.print("P[0][1]: ");
-  Serial.println(P[0][1], 12);
-  Serial.print("P[1][0]: ");
-  Serial.println(P[1][0], 12);
-  Serial.print("P[1][1]: ");
-  Serial.println(P[1][1], 12);
-  multiplyMatrix_2x2_2x2(K, aux_inverse, K);
+  multiplyMatrix_2x2_2x2(P, C_transp, K_aux);
+  multiplyMatrix_2x2_2x2(K_aux, aux_inverse, K);
   
   // % passo 4
   // [MATLAB]
@@ -317,15 +302,12 @@ void loop() {
   float z[2];
   multiplyMatrix_2x2_2x1(C, xk_aux, z);
   float cXy[2];
-  multiplyMatrix_2x2_2x1(C, yk, cXy);
-  cXy[0] -= z[0];
-  cXy[1] -= z[1];
-  multiplyMatrix_2x2_2x1(K, cXy, cXy);
+  float cXy_aux[2];
+  multiplyMatrix_2x2_2x1(C, yk, cXy_aux);
+  cXy_aux[0] -= z[0];
+  cXy_aux[1] -= z[1];
+  multiplyMatrix_2x2_2x1(K, cXy_aux, cXy);
 
-  Serial.print("xk_aux[1]: ");
-  Serial.println(xk_aux[1], 12);
-  Serial.print("cXy[1]: ");
-  Serial.println(cXy[1], 12);
   xk_kalman[0] = xk_aux[0] + cXy[0]; // posição com o filtro de kalman
   xk_kalman[1] = xk_aux[1] + cXy[1]; // velocidade com o filtro de kalman
  
@@ -346,22 +328,26 @@ void loop() {
   Serial.println(yk[1]);      // gps | verde
 
   if (calibration_pending) {
-    threshold_array[loop_count] = xk_kalman[1];
-
-    if (loop_count > calibration_measurements) {
+    Serial.println("Aooo treem");
+    if (loop_count >= calibration_measurements) {
       float sum_aux = 0;
       for (int a = 0; a < calibration_measurements; a++) {
         sum_aux += threshold_array[a];
       }
       threshold = sum_aux / calibration_measurements;
+
+      Serial.print("\n\nthreshold: ");
+      Serial.println(threshold, 5);
       
       calibration_pending = false;
       digitalWrite(CALIB_PENDING, LOW);
       digitalWrite(CALIB_DONE, LOW);
       digitalWrite(CALIB_COV, LOW);
       
+    } else {
+      threshold_array[loop_count] = xk_kalman[1];
+      loop_count++;
     }
-    loop_count++;
   } else {
     if (xk_kalman[1] > (threshold + OFFSET) || xk_kalman[1] < (threshold - OFFSET)) {
       digitalWrite(STOPPED, LOW);
@@ -371,8 +357,6 @@ void loop() {
       digitalWrite(MOVING, LOW);
     }
   }
-  
-  
 }
 
 
@@ -482,8 +466,8 @@ void multiplyMatrix_2x2_2x2(float M1[2][2], float M2[2][2], float returnMatriz[2
 }
 
 void multiplyMatrix_2x2_2x1(float M1[2][2], float M2[2], float returnMatriz[2]) {
-    returnMatriz[0] = (M1[0][0] * M2[0]) + (M1[0][1] * M2[1]);
-    returnMatriz[1] = (M1[1][0] * M2[0]) + (M1[1][1] * M2[1]);
+    returnMatriz[0] = ((M1[0][0] * M2[0])) + ((M1[0][1] * M2[1]));
+    returnMatriz[1] = ((M1[1][0] * M2[0])) + ((M1[1][1] * M2[1]));
     return;
 }
 
