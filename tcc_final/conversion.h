@@ -18,7 +18,8 @@ class mpu_conv_class {
     void make_conversion();
     float return_acc_NED(char select);
     // float return_acc_XYZ(char select);
-    bool update_data();    
+    bool update_data();
+    void returnCordCart(float mod, float *outN, float *outE, float refN, float refE);
     
   private:
     float _acc_N, _acc_E, _acc_D;

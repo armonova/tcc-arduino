@@ -26,8 +26,8 @@
 #define GPS_TX 3
 #define Serial_Baud 9600
 
-//#define GRAPH
-#define TEST
+#define GRAPH
+//#define TEST
 
 
 // matriz "B", de entrada
@@ -45,12 +45,23 @@ float original_posi_gps_N;
 float original_posi_gps_E;
 
 // matriz "Q", de covariância
-float Q_MOD[2][2] = {
+float Q_MOD_N[2][2] = {
   {0.0, 0.0},
   {0.0, 0.0}
 };
 
-float R_MOD[2][2] = {
+float R_MOD_N[2][2] = {
+  {0.0, 0.0},
+  {0.0, 0.0}
+};
+
+// matriz "Q", de covariância
+float Q_MOD_E[2][2] = {
+  {0.0, 0.0},
+  {0.0, 0.0}
+};
+
+float R_MOD_E[2][2] = {
   {0.0, 0.0},
   {0.0, 0.0}
 };
@@ -180,7 +191,7 @@ void loop() {
   
   // Variáveis
   bool newGpsData = false;
-  float posi_gps_E, posi_gps_N, speed_gps;
+  float posi_gps_E, posi_gps_N, speed_gps_N, speed_gpd_E;
   
   // matriz "A", de estado (0.1 = período de amostragem)
   float A[2][2] = {
@@ -207,14 +218,11 @@ void loop() {
     // Atualiza os dados do GPS
     gps.f_get_position(&posi_gps_E, &posi_gps_N);
     if (TinyGPS::GPS_INVALID_F_SPEED && TinyGPS::GPS_INVALID_F_ANGLE) {
-      posi_gps_E = posi_gps_E - original_posi_gps_E;
-      posi_gps_N = posi_gps_N - original_posi_gps_N;
-      speed_gps = gps.f_speed_mps();
 
-      yk_N[0] = sqrt((posi_gps_E * posi_gps_E) + (posi_gps_N * posi_gps_N));
-      yk_N[1] = gps.f_speed_mps();
-      yk_E[0] = sqrt((posi_gps_E * posi_gps_E) + (posi_gps_N * posi_gps_N));
-      yk_E[1] = gps.f_speed_mps();
+      yk_N[0] = posi_gps_N - original_posi_gps_N;
+      yk_E[0] = posi_gps_E - original_posi_gps_E;
+
+      mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N[1], &yk_E[1], yk_N[0], yk_E[0]);
     } else {
       // Tem algum dado inválido
       // Serial.println("Dado inválido");
@@ -288,17 +296,15 @@ void loop() {
   multiplyMatrix_2x2_2x2(P_aux_aux_E, A_trasnp, P_E); // (A * new_P_ant) * A'
 
   // (A * new_P_ant * A') + Q
-  P_N[0][0] += Q_MOD[0][0];
-  P_N[0][1] += Q_MOD[0][1];
-
-  P_N[1][0] += Q_MOD[1][0];
-  P_N[1][1] += Q_MOD[1][1];
+  P_N[0][0] += Q_MOD_N[0][0];
+  P_N[0][1] += Q_MOD_N[0][1];
+  P_N[1][0] += Q_MOD_N[1][0];
+  P_N[1][1] += Q_MOD_N[1][1];
   //--
-  P_E[0][0] += Q_MOD[0][0];
-  P_E[0][1] += Q_MOD[0][1];
-
-  P_E[1][0] += Q_MOD[1][0];
-  P_E[1][1] += Q_MOD[1][1];
+  P_E[0][0] += Q_MOD_E[0][0];
+  P_E[0][1] += Q_MOD_E[0][1];
+  P_E[1][0] += Q_MOD_E[1][0];
+  P_E[1][1] += Q_MOD_E[1][1];
   
 
   /************************ C O R R E Ç Ã O ************************/
@@ -323,15 +329,15 @@ void loop() {
   multiplyMatrix_2x2_2x2(C, P_E, aux_aux_E);
   multiplyMatrix_2x2_2x2(aux_aux_N, C_transp, aux_N);
   multiplyMatrix_2x2_2x2(aux_aux_E, C_transp, aux_E);
-  aux_N[0][0] += R_MOD[0][0];
-  aux_N[0][1] += R_MOD[0][1]; 
-  aux_N[1][0] += R_MOD[1][0];
-  aux_N[1][1] += R_MOD[1][1];
+  aux_N[0][0] += R_MOD_N[0][0];
+  aux_N[0][1] += R_MOD_N[0][1]; 
+  aux_N[1][0] += R_MOD_N[1][0];
+  aux_N[1][1] += R_MOD_N[1][1];
 
-  aux_E[0][0] += R_MOD[0][0];
-  aux_E[0][1] += R_MOD[0][1]; 
-  aux_E[1][0] += R_MOD[1][0];
-  aux_E[1][1] += R_MOD[1][1];
+  aux_E[0][0] += R_MOD_E[0][0];
+  aux_E[0][1] += R_MOD_E[0][1]; 
+  aux_E[1][0] += R_MOD_E[1][0];
+  aux_E[1][1] += R_MOD_E[1][1];
 
   float aux_inverse_N[2][2];
   float aux_inverse_E[2][2];
@@ -389,6 +395,10 @@ void loop() {
   multiplyMatrix_2x2_2x2(P_aux_E, P_E, new_P_ant_E);
 
 #ifdef GRAPH
+  digitalWrite(CALIB_PENDING, LOW);
+  digitalWrite(CALIB_DONE, LOW);
+  digitalWrite(CALIB_COV, LOW);
+  
   Serial.print(xk_kalman_N[1]); // kalman | azul
   Serial.print(" ");
   Serial.print(xk_kalman_E[1]); // kalman | azul
@@ -437,11 +447,15 @@ void loop() {
 void standard_deviation_gps() {
   char _acquires = 50; // número de aquisição para cálculo do desvio padrão
   
-  float _posi_gps_DP_MOD[_acquires];
-  float _vel_gps_DP_MOD[_acquires];
+  float _posi_gps_DP_MOD_N[_acquires];
+  float _posi_gps_DP_MOD_E[_acquires];
+  float _vel_gps_DP_MOD_N[_acquires];
+  float _vel_gps_DP_MOD_E[_acquires];
 
-  float _sum_posi_gps_MOD = 0.0;
-  float _sum_vel_gps_MOD = 0.0;
+  float _sum_posi_gps_MOD_N = 0.0;
+  float _sum_vel_gps_MOD_N = 0.0;
+  float _sum_posi_gps_MOD_E = 0.0;
+  float _sum_vel_gps_MOD_E = 0.0;
 
   for (char i = 0; i < _acquires;) {
     // Armazena a Latitude e Longitude iniciais
@@ -461,50 +475,62 @@ void standard_deviation_gps() {
       float posi_gps_E, posi_gps_N;
       gps.f_get_position(&posi_gps_E, &posi_gps_N);
       // Armazena as posições no eixo North e East no momento que é ligado o dispositivo 
-      float _posi_gps_DP_N = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N);
-      float _posi_gps_DP_E = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E);
-      _posi_gps_DP_MOD[i] = sqrt((_posi_gps_DP_N * _posi_gps_DP_N) + (_posi_gps_DP_E * _posi_gps_DP_E));
-      _vel_gps_DP_MOD[i] = gps.f_speed_mps();
+      _posi_gps_DP_MOD_N[i] = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N);
+      _posi_gps_DP_MOD_E[i] = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E);
+
+      mpu_new.returnCordCart(gps.f_speed_mps(), &_vel_gps_DP_MOD_N[i], &_vel_gps_DP_MOD_E[i], _posi_gps_DP_MOD_N[i], _posi_gps_DP_MOD_E[i]);
     
-      _sum_posi_gps_MOD += _posi_gps_DP_MOD[i];
-      _sum_vel_gps_MOD += _vel_gps_DP_MOD[i];
+      _sum_posi_gps_MOD_N += _posi_gps_DP_MOD_N[i];
+      _sum_vel_gps_MOD_N += _vel_gps_DP_MOD_N[i];
+      _sum_posi_gps_MOD_E += _posi_gps_DP_MOD_E[i];
+      _sum_vel_gps_MOD_E += _vel_gps_DP_MOD_E[i];
       i++;
     }
   }
 
-  float _avg_posi_gps_MOD = _sum_posi_gps_MOD / (float)_acquires;
-  float _avg_vel_gps_MOD = _sum_vel_gps_MOD / (float)_acquires;
+  float _avg_posi_gps_MOD_N = _sum_posi_gps_MOD_N / (float)_acquires;
+  float _avg_vel_gps_MOD_N = _sum_vel_gps_MOD_N / (float)_acquires;
+  float _avg_posi_gps_MOD_E = _sum_posi_gps_MOD_E / (float)_acquires;
+  float _avg_vel_gps_MOD_E = _sum_vel_gps_MOD_E / (float)_acquires;
 
   
-  float _aux_DP_posi_gps_MOD = 0.0;
-  float _aux_DP_vel_gps_MOD = 0.0;
+  float _aux_DP_posi_gps_MOD_N = 0.0;
+  float _aux_DP_vel_gps_MOD_N = 0.0;
+  float _aux_DP_posi_gps_MOD_E = 0.0;
+  float _aux_DP_vel_gps_MOD_E = 0.0;
 
   for (int i = 0; i < _acquires; i++) {
-    _aux_DP_posi_gps_MOD += (_posi_gps_DP_MOD[i] - _avg_posi_gps_MOD) * (_posi_gps_DP_MOD[i] - _avg_posi_gps_MOD);
-    _aux_DP_vel_gps_MOD += (_vel_gps_DP_MOD[i] - _avg_vel_gps_MOD) * (_vel_gps_DP_MOD[i] - _avg_vel_gps_MOD);
+    _aux_DP_posi_gps_MOD_N += (_posi_gps_DP_MOD_N[i] - _avg_posi_gps_MOD_N) * (_posi_gps_DP_MOD_N[i] - _avg_posi_gps_MOD_N);
+    _aux_DP_vel_gps_MOD_N += (_vel_gps_DP_MOD_N[i] - _avg_vel_gps_MOD_N) * (_vel_gps_DP_MOD_N[i] - _avg_vel_gps_MOD_N);
+    _aux_DP_posi_gps_MOD_E += (_posi_gps_DP_MOD_E[i] - _avg_posi_gps_MOD_E) * (_posi_gps_DP_MOD_E[i] - _avg_posi_gps_MOD_E);
+    _aux_DP_vel_gps_MOD_E += (_vel_gps_DP_MOD_E[i] - _avg_vel_gps_MOD_E) * (_vel_gps_DP_MOD_E[i] - _avg_vel_gps_MOD_E);
   }
 
   // Determina a matriz de covariância R (GPS)
-  R_MOD[0][0] = _aux_DP_posi_gps_MOD / (float)_acquires;  // posição
-  R_MOD[1][1] = _aux_DP_vel_gps_MOD / (float)_acquires;  // posição
+  R_MOD_N[0][0] = _aux_DP_posi_gps_MOD_N / (float)_acquires;  // posição
+  R_MOD_N[1][1] = _aux_DP_vel_gps_MOD_N / (float)_acquires;  // posição
+  R_MOD_E[0][0] = _aux_DP_posi_gps_MOD_E / (float)_acquires;  // posição
+  R_MOD_E[1][1] = _aux_DP_vel_gps_MOD_E / (float)_acquires;  // posição
 }
 
 
 void standard_deviation_acc() {
   char _acquires = 50; // número de aquisição para cálculo do desvio padrão
   
-  float _acc_acc_DP_MOD[_acquires];
+  float _acc_acc_DP_MOD_N[_acquires];
+  float _acc_acc_DP_MOD_E[_acquires];
 
-  float _sum_acc_acc_MOD = 0.0;
+  float _sum_acc_acc_MOD_N = 0.0;
+  float _sum_acc_acc_MOD_E = 0.0;
   
   for (char i = 0; i < _acquires;) {
     if (mpu_new.update_data()) {
       mpu_new.make_conversion();
-      float _acc_acc_DP_N = mpu_new.return_acc_NED('N');
-      float _acc_acc_DP_E = mpu_new.return_acc_NED('E');
-      _acc_acc_DP_MOD[i] = sqrt((_acc_acc_DP_N * _acc_acc_DP_N) + (_acc_acc_DP_E * _acc_acc_DP_E));
+      _acc_acc_DP_MOD_N[i] = mpu_new.return_acc_NED('N');
+      _acc_acc_DP_MOD_E[i] = mpu_new.return_acc_NED('E');
     
-      _sum_acc_acc_MOD += _acc_acc_DP_MOD[i];
+      _sum_acc_acc_MOD_N += _acc_acc_DP_MOD_N[i];
+      _sum_acc_acc_MOD_E += _acc_acc_DP_MOD_E[i];
       i++;
     }
     delay(100); // frequencia de 10Hz
@@ -512,22 +538,30 @@ void standard_deviation_acc() {
 
   delay(2000);
 
-  float _avg_acc_acc_MOD = _sum_acc_acc_MOD / (float)_acquires;
+  float _avg_acc_acc_MOD_N = _sum_acc_acc_MOD_N / (float)_acquires;
+  float _avg_acc_acc_MOD_E = _sum_acc_acc_MOD_E / (float)_acquires;
   
-  float _auxE_DP_acc_acc_MOD = 0.0;
+  float _auxE_DP_acc_acc_MOD_N = 0.0;
+  float _auxE_DP_acc_acc_MOD_E = 0.0;
 
   for (int i = 0; i < _acquires; i++) {
-    _auxE_DP_acc_acc_MOD += (_acc_acc_DP_MOD[i] - _avg_acc_acc_MOD) * (_acc_acc_DP_MOD[i] - _avg_acc_acc_MOD);
+    _auxE_DP_acc_acc_MOD_N += (_acc_acc_DP_MOD_N[i] - _avg_acc_acc_MOD_N) * (_acc_acc_DP_MOD_N[i] - _avg_acc_acc_MOD_N);
+    _auxE_DP_acc_acc_MOD_E += (_acc_acc_DP_MOD_E[i] - _avg_acc_acc_MOD_E) * (_acc_acc_DP_MOD_E[i] - _avg_acc_acc_MOD_E);
   }
   
-  float _DP_acc_acc_MOD = sqrt(_auxE_DP_acc_acc_MOD / (float)_acquires);
+  float _DP_acc_acc_MOD_N = sqrt(_auxE_DP_acc_acc_MOD_N / (float)_acquires);
+  float _DP_acc_acc_MOD_E = sqrt(_auxE_DP_acc_acc_MOD_E / (float)_acquires);
 
-  float DP_posi_MOD = 0.005 * _DP_acc_acc_MOD;    // 0.005 = (0.1 * 0.1)/2 => (delta t)²/2
-  float DP_vel_MOD = 0.1 * _DP_acc_acc_MOD;       // 0.1 => delta t
+  float DP_posi_MOD_N = 0.005 * _DP_acc_acc_MOD_N;    // 0.005 = (0.1 * 0.1)/2 => (delta t)²/2
+  float DP_vel_MOD_N = 0.1 * _DP_acc_acc_MOD_N;       // 0.1 => delta t
+  float DP_posi_MOD_E = 0.005 * _DP_acc_acc_MOD_E;    // 0.005 = (0.1 * 0.1)/2 => (delta t)²/2
+  float DP_vel_MOD_E = 0.1 * _DP_acc_acc_MOD_E;       // 0.1 => delta t
     
   // Determinação da matriz Q de covariância
-  Q_MOD[0][0] = DP_posi_MOD * DP_posi_MOD;  // variancia posição
-  Q_MOD[1][1] = DP_vel_MOD * DP_vel_MOD;    // variancia velocidade
+  Q_MOD_N[0][0] = DP_posi_MOD_N * DP_posi_MOD_N;  // variancia posição
+  Q_MOD_N[1][1] = DP_vel_MOD_N * DP_vel_MOD_N;    // variancia velocidade
+  Q_MOD_E[0][0] = DP_posi_MOD_E * DP_posi_MOD_E;  // variancia posição
+  Q_MOD_E[1][1] = DP_vel_MOD_E * DP_vel_MOD_E;    // variancia velocidade
 }
 
 void multiplyMatrix_2x2_2x2(float M1[2][2], float M2[2][2], float returnMatriz[2][2]) {
