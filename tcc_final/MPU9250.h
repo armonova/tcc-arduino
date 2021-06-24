@@ -112,9 +112,6 @@ public:
     bool setup(const uint8_t addr, const MPU9250Setting& mpu_setting = MPU9250Setting(), WireType& w = Wire) {
         // addr should be valid for MPU
         if ((addr < MPU9250_DEFAULT_ADDRESS) || (addr > MPU9250_DEFAULT_ADDRESS + 7)) {
-            Serial.print("I2C address 0x");
-            Serial.print(addr, HEX);
-            Serial.println(" is not valid for MPU. Please check your I2C address.");
             return false;
         }
         mpu_i2c_addr = addr;
@@ -690,8 +687,6 @@ private:
 
     void print_i2c_error() {
         if (i2c_err_ == 7) return;  // to avoid stickbreaker-i2c branch's error code
-        Serial.print("I2C ERROR CODE : ");
-        Serial.println(i2c_err_);
     }
 };
 
