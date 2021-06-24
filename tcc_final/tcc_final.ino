@@ -12,6 +12,12 @@
    Estado 4: LED VERDE aceso: Calibração finalizada - Já pode utilizar o dispositivo
 */
 
+/*
+ * TODO list:
+ * Diminuir a frequência de amostragem
+ *  - Lembrar de atualizar os parâmetros que estão sendo utilizados para o cálculo da matriz Q - Acelerômetro
+ */
+
 #include "conversion.h"
 #include <SoftwareSerial.h>
 #include "TinyGPS.h"
@@ -156,24 +162,10 @@ bool calibration_pending = true;
 
 void loop() {
   /*
-     TESTE para deixar as matriz com os mesmos pesos
-     Dessa maneira o resuldado do filtro deve ser uma combinação entre as duas medições
-  */
-  //  Q_MOD[0][0] = 0.1;
-  //  Q_MOD[1][1] = 0.1;
-  //  R_MOD[0][0] = 0.1;
-  //  R_MOD[1][1] = 0.1;
-  /*
-    Serial.print("Q_MOD[0][0]: ");
-    Serial.println(Q_MOD[0][0], 12);
-    Serial.print("Q_MOD[1][1]: ");
-    Serial.println(Q_MOD[1][1], 12);
-    Serial.print("R_MOD[0][0]: ");
-    Serial.println(R_MOD[0][0], 12);
-    Serial.print("R_MOD[1][1]: ");
-    Serial.println(R_MOD[1][1], 12);
-  */
-
+   * TESTE:
+   * para deixar as matriz com os mesmos pesos
+   * Dessa maneira o resuldado do filtro deve ser uma combinação entre as duas medições
+   */
 
   // Variáveis
   bool newGpsData = false;
@@ -208,6 +200,8 @@ void loop() {
       yk_N[0] = posi_gps_N - original_posi_gps_N;
       yk_E[0] = posi_gps_E - original_posi_gps_E;
 
+      // TODO: usar um angulo correto instead of yk[0] - posição - Precisa ser ou o ângulo do mag. ou a velocidade que vem do acelerômetro
+      // TODO: Fazer baseado na velocidade do acelerômetro
       mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N[1], &yk_E[1], yk_N[0], yk_E[0]);
     } else {
       // Tem algum dado inválido
@@ -460,9 +454,11 @@ void standard_deviation_gps() {
       float posi_gps_E, posi_gps_N;
       gps.f_get_position(&posi_gps_E, &posi_gps_N);
       // Armazena as posições no eixo North e East no momento que é ligado o dispositivo
-      _posi_gps_DP_MOD_N[i] = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N);
-      _posi_gps_DP_MOD_E[i] = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E);
+      _posi_gps_DP_MOD_N[i] = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N) - original_posi_gps_N;
+      _posi_gps_DP_MOD_E[i] = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E) - original_posi_gps_E;
 
+      // TODO: pegar o ângulo do Magnetômetro
+      // Fazer a evolução junto com o acelerometro? - Lembrando que nesse ponto a plaquinha deveria ser considerada como parada
       mpu_new.returnCordCart(gps.f_speed_mps(), &_vel_gps_DP_MOD_N[i], &_vel_gps_DP_MOD_E[i], _posi_gps_DP_MOD_N[i], _posi_gps_DP_MOD_E[i]);
 
       _sum_posi_gps_MOD_N += _posi_gps_DP_MOD_N[i];
