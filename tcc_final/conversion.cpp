@@ -100,7 +100,12 @@ float mpu_conv_class::return_acc_NED(char select) {
 }
 
 void mpu_conv_class::returnCordCart(float mod, float *outN, float *outE, float refN, float refE) {
-  float angle = atan2(refN, refE);
-  *outN = sin(angle) * mod;
-  *outE = cos(angle) * mod;
+  if (refN != 0 && refE != 0) {
+    float angle = atan2(refN, refE);
+    *outN = sin(angle) * mod;
+    *outE = cos(angle) * mod;
+  } else {
+    *outN = 0;
+    *outE = 0;
+  }
 }

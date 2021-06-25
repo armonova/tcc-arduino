@@ -202,7 +202,7 @@ void loop() {
 
       // TODO: usar um angulo correto instead of yk[0] - posição - Precisa ser ou o ângulo do mag. ou a velocidade que vem do acelerômetro
       // TODO: Fazer baseado na velocidade do acelerômetro
-      mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N[1], &yk_E[1], yk_N[0], yk_E[0]);
+      mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N[1], &yk_E[1], xk_kalman_N[1], xk_kalman_E[1]);
     } else {
       // Tem algum dado inválido
       // Serial.println("Dado inválido");
@@ -424,7 +424,7 @@ void loop() {
 
 
 void standard_deviation_gps() {
-  char _acquires = 50; // número de aquisição para cálculo do desvio padrão
+  char _acquires = 25; // número de aquisição para cálculo do desvio padrão
 
   float _posi_gps_DP_MOD_N[_acquires];
   float _posi_gps_DP_MOD_E[_acquires];
@@ -456,10 +456,19 @@ void standard_deviation_gps() {
       // Armazena as posições no eixo North e East no momento que é ligado o dispositivo
       _posi_gps_DP_MOD_N[i] = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N) - original_posi_gps_N;
       _posi_gps_DP_MOD_E[i] = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E) - original_posi_gps_E;
+      
+      float vel_instant_N, vel_instant_E;
+      if (i > 0) {
+        vel_instant_N = (_posi_gps_DP_MOD_N[i] - _posi_gps_DP_MOD_N[i - 1]) * 0.1;
+        vel_instant_E = (_posi_gps_DP_MOD_E[i] - _posi_gps_DP_MOD_E[i - 1]) * 0.1;
+      } else {
+        vel_instant_N = _posi_gps_DP_MOD_N[i] * 0.1;
+        vel_instant_E = _posi_gps_DP_MOD_E[i] * 0.1;
+      }
 
       // TODO: pegar o ângulo do Magnetômetro
       // Fazer a evolução junto com o acelerometro? - Lembrando que nesse ponto a plaquinha deveria ser considerada como parada
-      mpu_new.returnCordCart(gps.f_speed_mps(), &_vel_gps_DP_MOD_N[i], &_vel_gps_DP_MOD_E[i], _posi_gps_DP_MOD_N[i], _posi_gps_DP_MOD_E[i]);
+      mpu_new.returnCordCart(gps.f_speed_mps(), &_vel_gps_DP_MOD_N[i], &_vel_gps_DP_MOD_E[i], vel_instant_N, vel_instant_E);
 
       _sum_posi_gps_MOD_N += _posi_gps_DP_MOD_N[i];
       _sum_vel_gps_MOD_N += _vel_gps_DP_MOD_N[i];
@@ -496,7 +505,7 @@ void standard_deviation_gps() {
 
 
 void standard_deviation_acc() {
-  char _acquires = 50; // número de aquisição para cálculo do desvio padrão
+  char _acquires = 25; // número de aquisição para cálculo do desvio padrão
 
   float _acc_acc_DP_MOD_N[_acquires];
   float _acc_acc_DP_MOD_E[_acquires];
