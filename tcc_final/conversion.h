@@ -23,7 +23,6 @@ class mpu_conv_class {
     
   private:
     float _acc_N, _acc_E, _acc_D;
-
     char _calib_pending, _calib_done;
 };
 

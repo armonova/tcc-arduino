@@ -233,22 +233,13 @@ int TinyGPS::gpsstrcmp(const char *str1, const char *str2)
 
 // lat/long in MILLIONTHs of a degree and age of fix in milliseconds
 // (note: versions 12 and earlier gave this value in 100,000ths of a degree.
-void TinyGPS::get_position(long *latitude, long *longitude, unsigned long *fix_age)
+void TinyGPS::get_position(float *latitude, float *longitude)
 {
-  if (latitude) *latitude = _latitude;
-  if (longitude) *longitude = _longitude;
-   GPS_INVALID_AGE : millis() - _last_position_fix;
+  if (latitude) *latitude = _latitude == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : (_latitude / 1000000.0);
+  if (longitude) *longitude = _longitude == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : (_longitude / 1000000.0);;
 }
 
 // date as ddmmyy, time as hhmmsscc, and age in milliseconds
-
-void TinyGPS::f_get_position(float *latitude, float *longitude)
-{
-  long lat, lon;
-  get_position(&lat, &lon);
-  *latitude = lat == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : (lat / 1000000.0);
-  *longitude = lat == GPS_INVALID_ANGLE ? GPS_INVALID_F_ANGLE : (lon / 1000000.0);
-}
 
 float TinyGPS::f_speed_knots() 
 {

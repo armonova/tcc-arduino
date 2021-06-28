@@ -58,9 +58,7 @@ public:
 
   // lat/long in MILLIONTHs of a degree and age of fix in milliseconds
   // (note: versions 12 and earlier gave lat/long in 100,000ths of a degree.
-  void get_position(long *latitude, long *longitude, unsigned long *fix_age = 0);
-
-  void f_get_position(float *latitude, float *longitude);
+  void get_position(float *latitude, float *longitude);
   float f_speed_knots();
   float f_speed_mps();
 

@@ -53,16 +53,19 @@ bool mpu_conv_class::config_mpu() {
 
 void mpu_conv_class::make_conversion(){
   float _phi, _theta, _psi; // angulos de euler
-  float _rot[3][3] = { { 0.0, 0.0, 0.0 },
+  /*
+   float _rot[3][3] = { { 0.0, 0.0, 0.0 },
                        { 0.0, 0.0, 0.0 },
                        { 0.0, 0.0, 0.0 } };
+  */
   // converte para angulos em radianos
   // angulos de Euler
   // angulos da medida do magnetómetro - teste
   _phi = mpu.getRoll() * (PI/180.0); // angulo entre o eixo X e a reta nodal      // getEulerX
   _theta = mpu.getPitch() * (PI/180.0); // angulo entre o eixo X' e a reta nodal  // getEulerY
   _psi = mpu.getYaw() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'       // getEulerZ
-  
+
+  /*
   // primeira linha da matriz de _rotação
   _rot[0][0] = cos(_theta) * cos(_psi);
   _rot[0][1] = -(cos(_phi) * sin(_psi)) + (sin(_phi) * sin(_theta) * cos(_psi));
@@ -77,11 +80,17 @@ void mpu_conv_class::make_conversion(){
   _rot[2][0] = -sin(_theta);
   _rot[2][1] = sin(_phi) * cos(_theta);
   _rot[2][2] = cos(_phi) * cos(_theta);
+  
 
   // multiplicação de matrizes
   _acc_N = (mpu.getAccX() * _rot[0][0]) + (mpu.getAccY() * _rot[0][1]) + (mpu.getAccZ() * _rot[0][2]);
   _acc_E = (mpu.getAccX() * _rot[1][0]) + (mpu.getAccY() * _rot[1][1]) + (mpu.getAccZ() * _rot[1][2]);
   _acc_D = (mpu.getAccX() * _rot[2][0]) + (mpu.getAccY() * _rot[2][1]) + (mpu.getAccZ() * _rot[2][2]); 
+  */
+  
+  _acc_N = (mpu.getAccX() * cos(_theta) * cos(_psi)) + (mpu.getAccY() * -(cos(_phi) * sin(_psi)) + (sin(_phi) * sin(_theta) * cos(_psi))) + (mpu.getAccZ() * (sin(_phi) * sin(_psi)) + (cos(_phi) * sin(_theta) * cos(_psi)));
+  _acc_E = (mpu.getAccX() * cos(_theta) * sin(_psi)) + (mpu.getAccY() * (cos(_phi) * cos(_psi)) + (sin(_phi) * sin(_theta) * sin(_psi))) + (mpu.getAccZ() * -(sin(_phi) * cos(_psi)) + (cos(_phi) * sin(_theta) * sin(_psi)));
+  _acc_D = (mpu.getAccX() * -sin(_theta)) + (mpu.getAccY() * sin(_phi) * cos(_theta)) + (mpu.getAccZ() * cos(_phi) * cos(_theta)); 
 }
 
 bool mpu_conv_class::update_data() {
