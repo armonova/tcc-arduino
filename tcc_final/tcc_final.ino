@@ -27,13 +27,13 @@
 #define CALIB_COV 7       // Led Amarelo - Calibração Matrizes de covariância
 #define STOPPED 13        // LED vermelho - indica que a pessoa parou
 #define MOVING 8          // LED Verde - Pessoa em movimento
-#define OFFSET 0.2
+#define OFFSET 0.01
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
 
 #define GRAPH_VISUALIZATION
-//#define REAL_TEST
+// #define REAL_TEST
 
 
 // matriz "B", de entrada
@@ -379,11 +379,11 @@ void loop() {
   float mod_acc_vel = sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])); // PREDIÇÃO
   float mod_gps_vel = sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])); // SENSOR
   */
-  Serial.print(sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])));     // kalman | azul
+  Serial.print(sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])), 5);     // kalman | azul
   Serial.print(" ");
-  //Serial.print(sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])));        // acelerometro | vermelho
+  Serial.println(sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])));        // acelerometro | vermelho
   //Serial.print(" ");
-  Serial.println(sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])));      // gps | verde
+  //Serial.println(sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])));      // gps | verde
 #endif
 #ifdef REAL_TEST
   if (calibration_pending) {
