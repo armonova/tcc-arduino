@@ -43,7 +43,7 @@ TinyGPS::TinyGPS()
 //
 // public methods
 //
-
+// é usado
 bool TinyGPS::encode(char c)
 {
   bool valid_sentence = false;

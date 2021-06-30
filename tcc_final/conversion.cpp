@@ -9,7 +9,7 @@
 #include "conversion.h"
 
 
-#define PI 3.1415926535897932384626433832795
+#define PIdiv180 0.01745329251994329576923690768489
 
 
 MPU9250 mpu;
@@ -30,7 +30,7 @@ bool mpu_conv_class::config_mpu() {
   if (!mpu.setup(0x68)) {  // change to your own address
     while (1) {
       return false;
-      delay(5000);
+      delay(3000);
     }
   }
     // calibrate anytime you want to
@@ -51,7 +51,7 @@ bool mpu_conv_class::config_mpu() {
     return true;
 }
 
-void mpu_conv_class::make_conversion(){
+void mpu_conv_class::make_conversion(float *acc_N, float *acc_E, float *acc_D){
   float _phi, _theta, _psi; // angulos de euler
   /*
    float _rot[3][3] = { { 0.0, 0.0, 0.0 },
@@ -61,9 +61,9 @@ void mpu_conv_class::make_conversion(){
   // converte para angulos em radianos
   // angulos de Euler
   // angulos da medida do magnetómetro - teste
-  _phi = mpu.getRoll() * (PI/180.0); // angulo entre o eixo X e a reta nodal      // getEulerX
-  _theta = mpu.getPitch() * (PI/180.0); // angulo entre o eixo X' e a reta nodal  // getEulerY
-  _psi = mpu.getYaw() * (PI/180.0); // anugulo entre o vetor Z e o vetor Z'       // getEulerZ
+  _phi = mpu.getRoll() * PIdiv180; // angulo entre o eixo X e a reta nodal      // getEulerX
+  _theta = mpu.getPitch() * PIdiv180; // angulo entre o eixo X' e a reta nodal  // getEulerY
+  _psi = mpu.getYaw() * PIdiv180; // anugulo entre o vetor Z e o vetor Z'       // getEulerZ
 
   /*
   // primeira linha da matriz de _rotação
@@ -88,24 +88,13 @@ void mpu_conv_class::make_conversion(){
   _acc_D = (mpu.getAccX() * _rot[2][0]) + (mpu.getAccY() * _rot[2][1]) + (mpu.getAccZ() * _rot[2][2]); 
   */
   
-  _acc_N = (mpu.getAccX() * cos(_theta) * cos(_psi)) + (mpu.getAccY() * -(cos(_phi) * sin(_psi)) + (sin(_phi) * sin(_theta) * cos(_psi))) + (mpu.getAccZ() * (sin(_phi) * sin(_psi)) + (cos(_phi) * sin(_theta) * cos(_psi)));
-  _acc_E = (mpu.getAccX() * cos(_theta) * sin(_psi)) + (mpu.getAccY() * (cos(_phi) * cos(_psi)) + (sin(_phi) * sin(_theta) * sin(_psi))) + (mpu.getAccZ() * -(sin(_phi) * cos(_psi)) + (cos(_phi) * sin(_theta) * sin(_psi)));
-  _acc_D = (mpu.getAccX() * -sin(_theta)) + (mpu.getAccY() * sin(_phi) * cos(_theta)) + (mpu.getAccZ() * cos(_phi) * cos(_theta)); 
+  *acc_N = (mpu.getAccX() * cos(_theta) * cos(_psi)) + (mpu.getAccY() * -(cos(_phi) * sin(_psi)) + (sin(_phi) * sin(_theta) * cos(_psi))) + (mpu.getAccZ() * (sin(_phi) * sin(_psi)) + (cos(_phi) * sin(_theta) * cos(_psi)));
+  *acc_E = (mpu.getAccX() * cos(_theta) * sin(_psi)) + (mpu.getAccY() * (cos(_phi) * cos(_psi)) + (sin(_phi) * sin(_theta) * sin(_psi))) + (mpu.getAccZ() * -(sin(_phi) * cos(_psi)) + (cos(_phi) * sin(_theta) * sin(_psi)));
+  *acc_D = (mpu.getAccX() * -sin(_theta)) + (mpu.getAccY() * sin(_phi) * cos(_theta)) + (mpu.getAccZ() * cos(_phi) * cos(_theta)); 
 }
 
 bool mpu_conv_class::update_data() {
   return mpu.update();
-}
-
-float mpu_conv_class::return_acc_NED(char select) {
-  switch(select) {
-    case 'N':
-      return _acc_N;
-    case 'E':
-      return _acc_E;
-    case 'D':
-      return _acc_D;
-  }
 }
 
 void mpu_conv_class::returnCordCart(float mod, float *outN, float *outE, float refN, float refE) {

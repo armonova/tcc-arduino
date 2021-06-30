@@ -15,14 +15,11 @@ class mpu_conv_class {
   public:
     mpu_conv_class(int calib_pending, int calib_done);
     bool config_mpu();
-    void make_conversion();
-    float return_acc_NED(char select);
-    // float return_acc_XYZ(char select);
+    void make_conversion(float *acc_N, float *acc_E, float *acc_D);
     bool update_data();
     void returnCordCart(float mod, float *outN, float *outE, float refN, float refE);
     
   private:
-    float _acc_N, _acc_E, _acc_D;
     char _calib_pending, _calib_done;
 };
 

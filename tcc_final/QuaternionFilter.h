@@ -25,6 +25,7 @@ public:
     }
 
     // Madgwick Quaternion Update
+    // usa
     void madgwick(float ax, float ay, float az, float gx, float gy, float gz, float mx, float my, float mz, float* q) {
         float q0 = q[0], q1 = q[1], q2 = q[2], q3 = q[3];  // short name local variable for readability
         float recipNorm;

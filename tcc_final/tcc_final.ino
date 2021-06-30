@@ -27,13 +27,15 @@
 #define CALIB_COV 7       // Led Amarelo - Calibração Matrizes de covariância
 #define STOPPED 13        // LED vermelho - indica que a pessoa parou
 #define MOVING 8          // LED Verde - Pessoa em movimento
-#define OFFSET 0.01
+#define OFFSET 0.3
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
 
 #define GRAPH_VISUALIZATION
-// #define REAL_TEST
+//#define REAL_TEST
+
+#define CALC_SD
 
 
 // matriz "B", de entrada
@@ -51,12 +53,12 @@ float original_posi_gps_N;
 float original_posi_gps_E;
 
 // matriz "Q", de covariância
-float Q_N[2] = {0.0, 0.0};
-float R_N[2] = {0.0, 0.0};
+float Q_N[2] = {0.1, 0.1};
+float R_N[2] = {0.1, 0.1};
 
 // matriz "Q", de covariância
-float Q_E[2] = {0.0, 0.0};
-float R_E[2] = {0.0, 0.0};
+float Q_E[2] = {0.1, 0.1};
+float R_E[2] = {0.1, 0.1};
 
 void setup() {
   // Seta os pinos do led como output
@@ -92,10 +94,14 @@ void setup() {
 
   // Inicializa o cáluclo das matrizes de COVARIÂNCIA
   digitalWrite(CALIB_COV, HIGH);
-  delay(3000); // espera 3 segundos para parar a placa
+  delay(2000); // espera 3 segundos para parar a placa
+  #ifdef CALC_SD
   standard_deviation_acc('N');
   standard_deviation_acc('E');
   standard_deviation_gps();
+  #else
+  delay(5000);
+  #endif
   // Matriz de covariância calculada
 
   /*
@@ -106,25 +112,20 @@ void setup() {
   // Fica nesse loop até que seja possível receber algum dado do GPS
   bool newData = false;
   while (!newData) {
-    for (unsigned long start = millis(); millis() - start < 100;) {
-      while (gpsSerial.available()) {
-        char c = gpsSerial.read();
-        if (gps.encode(c)) // Atribui true para newData caso novos dados sejam recebidos
-          newData = true;
-      }
+    delay(100);
+    while (gpsSerial.available()) {
+      char c = gpsSerial.read();
+      if (gps.encode(c)) // Atribui true para newData caso novos dados sejam recebidos
+        newData = true;
     }
   }
-  float posi_gps_E, posi_gps_N;
-  gps.get_position(&posi_gps_E, &posi_gps_N);
+  gps.get_position(&original_posi_gps_E, &original_posi_gps_N);
   // Armazena as posições no eixo North e East no momento que é ligado o dispositivo
-  original_posi_gps_N = (posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_N);
-  original_posi_gps_E = (posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : posi_gps_E);
+  // Cuidado: removi a verificação de erro
+//  original_posi_gps_N = (original_posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : original_posi_gps_N);
+//  original_posi_gps_E = (original_posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : original_posi_gps_E);
 
   // Nesse ponto já foram armazenadas as posições inicias do GPS
-
-  digitalWrite(CALIB_PENDING, LOW);
-  digitalWrite(CALIB_COV, LOW);
-
   digitalWrite(CALIB_PENDING, HIGH);
   digitalWrite(CALIB_DONE, HIGH);
   digitalWrite(CALIB_COV, HIGH);
@@ -153,21 +154,20 @@ float yk_N[2] = { 0.0 , 0.0 };
 float yk_E[2] = { 0.0 , 0.0 };
 
 int calibration_measurements = 10;
-int loop_count = 0;
+char loop_count = 0;
 float threshold_array[10];
 float threshold;
 bool calibration_pending = true;
 
 void loop() {
   /*
-   * TESTE:
+   * TESTE: MATRIZ Q e R
    * para deixar as matriz com os mesmos pesos
    * Dessa maneira o resuldado do filtro deve ser uma combinação entre as duas medições
    */
-
   // Variáveis
   bool newGpsData = false;
-  float posi_gps_E, posi_gps_N, speed_gps_N, speed_gpd_E;
+  float posi_gps_E, posi_gps_N;
 
   // matriz "A", de estado (0.1 = período de amostragem)
   float A[2][2] = {
@@ -209,8 +209,9 @@ void loop() {
 
   // Leitura da MPU
   // Faz a aferição dos sensores
+  float acc_N, acc_E, acc_D;
   if (mpu_new.update_data()) {
-    mpu_new.make_conversion(); // Faz a leitura dos acelerometro e a conversão das coordenadas
+    mpu_new.make_conversion(&acc_N, &acc_E, &acc_D); // Faz a leitura dos acelerometro e a conversão das coordenadas
   }
 
   // EVOLUÇÃO DOS ESTADOS - ACELERÔMETRO
@@ -223,15 +224,15 @@ void loop() {
 
   // Matriz "u"
   /*
-    float mpu_new.return_acc_NED('N') = mpu_new.return_acc_NED('N');
-    float u_E = mpu_new.return_acc_NED('E');
+    float acc_N = acc_N;
+    float u_E = acc_E;
   */
 
   // Determinação de x_k - evolução dos estados
-  xk_N[0] = ((A[0][0] * xk_ant_N[0]) + (A[0][1] * xk_ant_N[1])) + (B_0 * mpu_new.return_acc_NED('N')); // posição
-  xk_N[1] = ((A[1][0] * xk_ant_N[0]) + (A[1][1] * xk_ant_N[1])) + (B_1 * mpu_new.return_acc_NED('N')); // velocidade
-  xk_E[0] = ((A[0][0] * xk_ant_E[0]) + (A[0][1] * xk_ant_E[1])) + (B_0 * mpu_new.return_acc_NED('E')); // posição
-  xk_E[1] = ((A[1][0] * xk_ant_E[0]) + (A[1][1] * xk_ant_E[1])) + (B_1 * mpu_new.return_acc_NED('E')); // velocidade
+  xk_N[0] = ((A[0][0] * xk_ant_N[0]) + (A[0][1] * xk_ant_N[1])) + (B_0 * acc_N); // posição
+  xk_N[1] = ((A[1][0] * xk_ant_N[0]) + (A[1][1] * xk_ant_N[1])) + (B_1 * acc_N); // velocidade
+  xk_E[0] = ((A[0][0] * xk_ant_E[0]) + (A[0][1] * xk_ant_E[1])) + (B_0 * acc_E); // posição
+  xk_E[1] = ((A[1][0] * xk_ant_E[0]) + (A[1][1] * xk_ant_E[1])) + (B_1 * acc_E); // velocidade
 
 
   /* Nesse ponto do código eu tenho a evolução dos estados do acelerômetro e GPS para
@@ -256,10 +257,10 @@ void loop() {
   multiplyMatrix_2x2_2x1(A, xk_ant_N, xk_aux_N);
   multiplyMatrix_2x2_2x1(A, xk_ant_E, xk_aux_E);
 
-  xk_aux_N[0] += B_0 * mpu_new.return_acc_NED('N');
-  xk_aux_N[1] += B_1 * mpu_new.return_acc_NED('N');
-  xk_aux_E[0] += B_0 * mpu_new.return_acc_NED('E');
-  xk_aux_E[1] += B_1 * mpu_new.return_acc_NED('E');
+  xk_aux_N[0] += B_0 * acc_N;
+  xk_aux_N[1] += B_1 * acc_N;
+  xk_aux_E[0] += B_0 * acc_E;
+  xk_aux_E[1] += B_1 * acc_E;
 
   // passo 2
   // [MATLAB] P = A * new_P_ant * A' + Q;
@@ -379,17 +380,22 @@ void loop() {
   float mod_acc_vel = sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])); // PREDIÇÃO
   float mod_gps_vel = sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])); // SENSOR
   */
-  Serial.print(sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])), 5);     // kalman | azul
+//  Serial.print(sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])), 6);     // kalman | azul
+//  Serial.print(" ");
+//  Serial.print(sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])), 6);        // acelerometro | vermelho
+//  Serial.print(" ");
+//  Serial.println(sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])), 6);      // gps | verde
+  Serial.print(xk_kalman_N[1], 6);     // kalman | azul
   Serial.print(" ");
-  Serial.println(sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])));        // acelerometro | vermelho
-  //Serial.print(" ");
-  //Serial.println(sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])));      // gps | verde
+  Serial.print(xk_N[1], 6);        // acelerometro | vermelho
+  Serial.print(" ");
+  Serial.println(yk_N[1], 6);      // gps | verde
 #endif
 #ifdef REAL_TEST
   if (calibration_pending) {
     if (loop_count >= calibration_measurements) {
-      float sum_aux = 0;
-      for (int a = 0; a < calibration_measurements; a++) {
+      float sum_aux = 0.0;
+      for (char a = 0; a < calibration_measurements; a++) {
         sum_aux += threshold_array[a];
       }
       threshold = sum_aux / calibration_measurements;
@@ -404,6 +410,8 @@ void loop() {
       loop_count++;
     }
   } else {
+    Serial.println(sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])), 5);
+    //Serial.println(threshold);
     if (sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])) > (threshold + OFFSET)) {
       digitalWrite(STOPPED, LOW);
       digitalWrite(MOVING, HIGH);
@@ -413,12 +421,11 @@ void loop() {
     }
   }
 #endif
-
 }
 
-
+#ifdef CALC_SD
 void standard_deviation_gps() {
-  char _acquires = 25; // número de aquisição para cálculo do desvio padrão
+  char _acquires = 15; // número de aquisição para cálculo do desvio padrão
 
   float _posi_gps_DP_N[_acquires];
   float _posi_gps_DP_E[_acquires];
@@ -483,7 +490,7 @@ void standard_deviation_gps() {
   float _aux_DP_posi_gps_E = 0.0;
   float _aux_DP_vel_gps_E = 0.0;
 
-  for (int i = 0; i < _acquires; i++) {
+  for (char i = 0; i < _acquires; i++) {
     _aux_DP_posi_gps_N += (_posi_gps_DP_N[i] - _avg_posi_gps_N) * (_posi_gps_DP_N[i] - _avg_posi_gps_N);
     _aux_DP_vel_gps_N += (_vel_gps_DP_N[i] - _avg_vel_gps_N) * (_vel_gps_DP_N[i] - _avg_vel_gps_N);
     _aux_DP_posi_gps_E += (_posi_gps_DP_E[i] - _avg_posi_gps_E) * (_posi_gps_DP_E[i] - _avg_posi_gps_E);
@@ -491,24 +498,27 @@ void standard_deviation_gps() {
   }
 
   // Determina a matriz de covariância R (GPS)
-  R_N[0] = _aux_DP_posi_gps_N / _acquires;  // posição
-  R_N[1] = _aux_DP_vel_gps_N / _acquires;  // posição
-  R_E[0] = _aux_DP_posi_gps_E / _acquires;  // posição
-  R_E[1] = _aux_DP_vel_gps_E / _acquires;  // posição
+//  R_N[0] = _aux_DP_posi_gps_N / _acquires;  // posição
+//  R_N[1] = _aux_DP_vel_gps_N / _acquires;  // posição
+//  R_E[0] = _aux_DP_posi_gps_E / _acquires;  // posição
+//  R_E[1] = _aux_DP_vel_gps_E / _acquires;  // posição
 }
 
 
 void standard_deviation_acc(char axis) {
-  char _acquires = 25; // número de aquisição para cálculo do desvio padrão
+  char _acquires = 15; // número de aquisição para cálculo do desvio padrão
 
   float _acc_acc_DP[_acquires];
 
   float _sum_acc_acc = 0.0;
+  float acc_N, acc_E, acc_D;
 
   for (char i = 0; i < _acquires;) {
     if (mpu_new.update_data()) {
-      mpu_new.make_conversion();
-      _acc_acc_DP[i] = mpu_new.return_acc_NED(axis);
+      mpu_new.make_conversion(&acc_N, &acc_E, &acc_D);
+      if (axis == 'N') _acc_acc_DP[i] = acc_N;
+      else if (axis == 'E') _acc_acc_DP[i] = acc_E;
+      
 
       _sum_acc_acc += _acc_acc_DP[i];
       i++;
@@ -520,7 +530,7 @@ void standard_deviation_acc(char axis) {
 
   float _aux_DP_acc_acc = 0.0;
 
-  for (int i = 0; i < _acquires; i++) {
+  for (char i = 0; i < _acquires; i++) {
     _aux_DP_acc_acc += (_acc_acc_DP[i] - (_sum_acc_acc / _acquires)) * (_acc_acc_DP[i] - (_sum_acc_acc / _acquires));
   }
 
@@ -531,13 +541,14 @@ void standard_deviation_acc(char axis) {
 
   // Determinação da matriz Q de covariância
   if (axis == 'N') {
-    Q_N[0] = DP_posi * DP_posi;  // variancia posição
-    Q_N[1] = DP_vel * DP_vel;    // variancia velocidade
+//    Q_N[0] = DP_posi * DP_posi;  // variancia posição
+//    Q_N[1] = DP_vel * DP_vel;    // variancia velocidade
   } else {
-    Q_E[0] = DP_posi * DP_posi;  // variancia posição
-    Q_E[1] = DP_vel * DP_vel;    // variancia velocidade 
+//    Q_E[0] = DP_posi * DP_posi;  // variancia posição
+//    Q_E[1] = DP_vel * DP_vel;    // variancia velocidade 
   }
 }
+#endif
 
 void multiplyMatrix_2x2_2x2(float M1[2][2], float M2[2][2], float returnMatriz[2][2]) {
   returnMatriz[0][0] = (M1[0][0] * M2[0][0]) + (M1[0][1] * M2[1][0]);

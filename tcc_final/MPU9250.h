@@ -137,10 +137,11 @@ public:
         b_ahrs = b;
     }
 
+    // é usada
     void calibrateAccelGyro() {
         calibrate_acc_gyro_impl();
     }
-
+    // é usado
     void calibrateMag() {
         calibrate_mag_impl();
     }
@@ -290,7 +291,7 @@ private:
         write_byte(mpu_i2c_addr, INT_ENABLE, 0x01);  // Enable data ready (bit 0) interrupt
         delay(100);
     }
-
+    // é usado
     void initAK8963() {
         // First extract the factory calibration for each magnetometer axis
         uint8_t raw_data[3];                            // x/y/z gyro calibration data stored here
@@ -339,6 +340,8 @@ private:
             euler[2] += 360.f;
     }
 
+
+    // essa função é usada
     void update_accel_gyro() {
         int16_t raw_acc_gyro_data[7];        // used to read all 14 bytes at once from the MPU9250 accel/gyro
         read_accel_gyro(raw_acc_gyro_data);  // INT cleared on any read
@@ -355,6 +358,7 @@ private:
         g[2] = (float)raw_acc_gyro_data[6] * gyro_resolution;
     }
 
+    // essa função é usada
     void read_accel_gyro(int16_t* destination) {
         uint8_t raw_data[14];                                                 // x/y/z accel register data stored here
         read_bytes(mpu_i2c_addr, ACCEL_XOUT_H, 14, &raw_data[0]);             // Read the 14 raw data registers into data array
@@ -367,6 +371,7 @@ private:
         destination[6] = ((int16_t)raw_data[12] << 8) | (int16_t)raw_data[13];
     }
 
+    // usa essa função
     void update_mag() {
         int16_t mag_count[3] = {0, 0, 0};  // Stores the 16-bit signed magnetometer sensor output
         read_mag(mag_count);               // Read the x/y/z adc values
@@ -381,6 +386,7 @@ private:
         m[2] = (float)(mag_count[2] * mag_resolution * mag_bias_factory[2] - mag_bias[2] * bias_to_current_bits) * mag_scale[2];
     }
 
+    // usa essa função
     void read_mag(int16_t* destination) {
         uint8_t raw_data[7];                                                 // x/y/z gyro register data, ST2 register stored here, must read ST2 at end of data acquisition
         if (read_byte(AK8963_ADDRESS, AK8963_ST1) & 0x01) {                  // wait for magnetometer data ready bit to be set
@@ -398,6 +404,7 @@ private:
     // of the at-rest readings and then loads the resulting offsets into accelerometer and gyro bias registers.
     // ACCEL_FS_SEL: 2g (maximum sensitivity)
     // GYRO_FS_SEL: 250dps (maximum sensitivity)
+    // é usado 
     void calibrate_acc_gyro_impl() {
         set_acc_gyro_to_calibration();
         collect_acc_gyro_data_to(acc_bias, gyro_bias);
@@ -408,6 +415,7 @@ private:
         delay(1000);
     }
 
+    // é usado
     void set_acc_gyro_to_calibration() {
         // reset device
         write_byte(mpu_i2c_addr, PWR_MGMT_1, 0x80);  // Write a one to bit 7 reset bit; toggle reset device
@@ -440,6 +448,7 @@ private:
         delay(40);                                  // accumulate 40 samples in 40 milliseconds = 480 bytes
     }
 
+    // é usado
     void collect_acc_gyro_data_to(float* a_bias, float* g_bias) {
         // At end of sample accumulation, turn off FIFO sensor read
         uint8_t data[12];                                    // data array to hold accelerometer and gyro x, y, z, data
@@ -480,6 +489,7 @@ private:
         }
     }
 
+    // é usado
     void write_accel_offset() {
         // Construct the accelerometer biases for push to the hardware accelerometer bias registers. These registers contain
         // factory trim values which must be added to the calculated accelerometer biases; on boot up these registers will hold
@@ -525,7 +535,7 @@ private:
         write_byte(mpu_i2c_addr, ZA_OFFSET_H, write_data[4]);
         write_byte(mpu_i2c_addr, ZA_OFFSET_L, write_data[5]);
     }
-
+    // é usado
     void write_gyro_offset() {
         // Construct the gyro biases for push to the hardware gyro bias registers, which are reset to zero upon device startup
         uint8_t gyro_offset_data[6] {0};
@@ -546,6 +556,7 @@ private:
     }
 
     // mag calibration is executed in MAG_OUTPUT_BITS: 16BITS
+    // é usado
     void calibrate_mag_impl() {
         // set MAG_OUTPUT_BITS to maximum to calibrate
         MAG_OUTPUT_BITS mag_output_bits_cache = setting.mag_output_bits;
@@ -556,7 +567,7 @@ private:
         setting.mag_output_bits = mag_output_bits_cache;
         initAK8963();
     }
-
+    // é usado
     void collect_mag_data_to(float* m_bias, float* m_scale) {
         delay(4000);
 
@@ -603,7 +614,7 @@ private:
         m_scale[1] = avg_rad / ((float)scale[1]);
         m_scale[2] = avg_rad / ((float)scale[2]);
     }
-
+    // é usado
     float get_acc_resolution(const ACCEL_FS_SEL accel_af_sel) const {
         switch (accel_af_sel) {
             // Possible accelerometer scales (and their register bit settings) are:
@@ -621,7 +632,7 @@ private:
                 return 0.;
         }
     }
-
+    // é usado
     float get_gyro_resolution(const GYRO_FS_SEL gyro_fs_sel) const {
         switch (gyro_fs_sel) {
             // Possible gyro scales (and their register bit settings) are:
@@ -639,7 +650,7 @@ private:
                 return 0.;
         }
     }
-
+    // é usado
     float get_mag_resolution(const MAG_OUTPUT_BITS mag_output_bits) const {
         switch (mag_output_bits) {
             // Possible magnetometer scales (and their register bit settings) are:
@@ -653,7 +664,7 @@ private:
                 return 0.;
         }
     }
-
+    // é usado
     void write_byte(uint8_t address, uint8_t subAddress, uint8_t data) {
         wire->beginTransmission(address);    // Initialize the Tx buffer
         wire->write(subAddress);             // Put slave register address in Tx buffer
@@ -661,7 +672,7 @@ private:
         i2c_err_ = wire->endTransmission();  // Send the Tx buffer
         if (i2c_err_) print_i2c_error();
     }
-
+    // é usado
     uint8_t read_byte(uint8_t address, uint8_t subAddress) {
         uint8_t data = 0;                         // `data` will store the register data
         wire->beginTransmission(address);         // Initialize the Tx buffer
@@ -672,7 +683,7 @@ private:
         if (wire->available()) data = wire->read();  // Fill Rx buffer with result
         return data;                                 // Return data read from slave register
     }
-
+    // é usado
     void read_bytes(uint8_t address, uint8_t subAddress, uint8_t count, uint8_t* dest) {
         wire->beginTransmission(address);         // Initialize the Tx buffer
         wire->write(subAddress);                  // Put slave register address in Tx buffer
@@ -684,7 +695,7 @@ private:
             dest[i++] = wire->read();
         }  // Put read results in the Rx buffer
     }
-
+    // é usado
     void print_i2c_error() {
         if (i2c_err_ == 7) return;  // to avoid stickbreaker-i2c branch's error code
     }
