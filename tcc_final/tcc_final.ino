@@ -27,13 +27,13 @@
 #define CALIB_COV 7       // Led Amarelo - Calibração Matrizes de covariância
 #define STOPPED 13        // LED vermelho - indica que a pessoa parou
 #define MOVING 8          // LED Verde - Pessoa em movimento
-#define OFFSET 0.3
+#define OFFSET 0.15
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
 
-#define GRAPH_VISUALIZATION
-//#define REAL_TEST
+//#define GRAPH_VISUALIZATION
+#define REAL_TEST
 
 #define CALC_SD
 
