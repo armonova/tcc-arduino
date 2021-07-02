@@ -27,13 +27,15 @@
 #define CALIB_COV 7       // Led Amarelo - Calibração Matrizes de covariância
 #define STOPPED 13        // LED vermelho - indica que a pessoa parou
 #define MOVING 8          // LED Verde - Pessoa em movimento
-#define OFFSET 0.15
+#define OFFSET 0.3
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
 
-//#define GRAPH_VISUALIZATION
-#define REAL_TEST
+#define GRAPH_VISUALIZATION
+//#define REAL_TEST
+//#define GRAPH_AXIS_N_VISUALIZATION
+//#define GRAPH_AXIS_E_VISUALIZATION
 
 #define CALC_SD
 
@@ -205,6 +207,9 @@ void loop() {
       // Tem algum dado inválido
       // Serial.println("Dado inválido");
     }
+  } else {
+    yk_N[1] = 0;
+    yk_E[1] = 0;
   }
 
   // Leitura da MPU
@@ -375,22 +380,42 @@ void loop() {
   digitalWrite(CALIB_PENDING, LOW);
   digitalWrite(CALIB_DONE, LOW);
   digitalWrite(CALIB_COV, LOW);
-  /*
+  
   float mod_vel_kalman = sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1]));
   float mod_acc_vel = sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])); // PREDIÇÃO
   float mod_gps_vel = sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])); // SENSOR
-  */
-//  Serial.print(sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])), 6);     // kalman | azul
-//  Serial.print(" ");
-//  Serial.print(sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])), 6);        // acelerometro | vermelho
-//  Serial.print(" ");
-//  Serial.println(sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])), 6);      // gps | verde
+  
+  Serial.print(mod_vel_kalman, 6);     // kalman | azul
+  Serial.print(" ");
+  Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
+  Serial.print(" ");
+  Serial.println(mod_gps_vel, 6);      // gps | verde
+#endif
+
+#ifdef GRAPH_AXIS_N_VISUALIZATION
+  digitalWrite(CALIB_PENDING, LOW);
+  digitalWrite(CALIB_DONE, LOW);
+  digitalWrite(CALIB_COV, LOW);
+  
   Serial.print(xk_kalman_N[1], 6);     // kalman | azul
   Serial.print(" ");
   Serial.print(xk_N[1], 6);        // acelerometro | vermelho
   Serial.print(" ");
-  Serial.println(yk_N[1], 6);      // gps | verde
+  Serial.println(yk_N[1], 6);      // gps | verde  
 #endif
+
+#ifdef GRAPH_AXIS_E_VISUALIZATION
+  digitalWrite(CALIB_PENDING, LOW);
+  digitalWrite(CALIB_DONE, LOW);
+  digitalWrite(CALIB_COV, LOW);
+  
+  Serial.print(xk_kalman_E[1], 6);     // kalman | azul
+  Serial.print(" ");
+  Serial.print(xk_E[1], 6);        // acelerometro | vermelho
+  Serial.print(" ");
+  Serial.println(yk_E[1], 6);      // gps | verde  
+#endif
+
 #ifdef REAL_TEST
   if (calibration_pending) {
     if (loop_count >= calibration_measurements) {
