@@ -22,23 +22,23 @@
 #include <SoftwareSerial.h>
 #include "TinyGPS.h"
 
-#define CALIB_PENDING 13  // Led Vermelho
+#define CALIB_PENDING 2  // Led Vermelho
 #define CALIB_DONE 8      // Led Verde
-#define CALIB_COV 7       // Led Amarelo - Calibração Matrizes de covariância
-#define STOPPED 13        // LED vermelho - indica que a pessoa parou
+#define CALIB_COV 13       // Led Amarelo - Calibração Matrizes de covariância
+#define STOPPED 2        // LED vermelho - indica que a pessoa parou
 #define MOVING 8          // LED Verde - Pessoa em movimento
-#define OFFSET 0.3
+#define OFFSET_MOVING 0.25
+#define OFFSET_STOPPED 0.15
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
 
-#define GRAPH_VISUALIZATION
-//#define REAL_TEST
+//#define GRAPH_VISUALIZATION
+#define REAL_TEST
 //#define GRAPH_AXIS_N_VISUALIZATION
 //#define GRAPH_AXIS_E_VISUALIZATION
 
 #define CALC_SD
-
 
 // matriz "B", de entrada
 #define B_0 0.005     // (0.1)² / 2 => (delta t)²/2
@@ -437,10 +437,10 @@ void loop() {
   } else {
     Serial.println(sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])), 5);
     //Serial.println(threshold);
-    if (sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])) > (threshold + OFFSET)) {
+    if (sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])) > (threshold + OFFSET_MOVING)) {
       digitalWrite(STOPPED, LOW);
       digitalWrite(MOVING, HIGH);
-    } else {
+    } else if (sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1])) < (threshold + OFFSET_STOPPED)) {
       digitalWrite(STOPPED, HIGH);
       digitalWrite(MOVING, LOW);
     }
