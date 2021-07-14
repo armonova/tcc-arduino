@@ -291,33 +291,28 @@ void loop() {
   /************************ C O R R E Ç Ã O ************************/
   // passo 3
   // K = P * C' * inv(C * P * C' + R);
-  float C[2][2] = {
-    {1.0, 0.0},
-    {0.0, 1.0}
-  };
+  float C[2] = {0.0, 1.0};
 
   float K_N[2][2];
   float K_E[2][2];
-  float K_aux_N[2][2];
-  float K_aux_E[2][2];
-  float aux_N[2][2];
-  float aux_E[2][2];
-  float aux_aux_N[2][2];
-  float aux_aux_E[2][2];
-  multiplyMatrix_2x2_2x2(C, P_N, aux_aux_N);
-  multiplyMatrix_2x2_2x2(C, P_E, aux_aux_E);
-  multiplyMatrix_2x2_2x2(aux_aux_N, C, aux_N);
-  multiplyMatrix_2x2_2x2(aux_aux_E, C, aux_E);
-  aux_N[0][0] += R_N[0];
-  //aux_N[0][1] += R_N[0][1];
-  //aux_N[1][0] += R_N[1][0];
-  aux_N[1][1] += R_N[1];
+  float K_aux_N[2];
+  float K_aux_E[2];
+  float aux_N;
+  float aux_E;
+  float aux_aux_N[2];
+  float aux_aux_E[2];
+  multiplyMatrix_2x1_2x2(C, P_N, aux_aux_N);
+  multiplyMatrix_2x1_2x2(C, P_E, aux_aux_E);
+  //multiplyMatrix_2x2_2x2(aux_aux_N, C, aux_N);
+  //multiplyMatrix_2x2_2x2(aux_aux_E, C, aux_E);
+  
+  aux_N = aux_aux_N[1];
+  aux_E = aux_aux_E[1];
+  
+  aux_N += R_N;
+  aux_E += R_E;
 
-  aux_E[0][0] += R_E[0];
-  //aux_E[0][1] += R_E[0][1]; = 0
-  //aux_E[1][0] += R_E[1][0]; = 0
-  aux_E[1][1] += R_E[1];
-
+  // TODO: FEITO ATÉ AQUI - evolução apenas com C = [0, 1]
   float aux_inverse_N[2][2];
   float aux_inverse_E[2][2];
   inverseMatrix(aux_N, aux_inverse_N); // = inv(C * P * C' + R)
@@ -584,6 +579,12 @@ void multiplyMatrix_2x2_2x2(float M1[2][2], float M2[2][2], float returnMatriz[2
 void multiplyMatrix_2x2_2x1(float M1[2][2], float M2[2], float returnMatriz[2]) {
   returnMatriz[0] = ((M1[0][0] * M2[0])) + ((M1[0][1] * M2[1]));
   returnMatriz[1] = ((M1[1][0] * M2[0])) + ((M1[1][1] * M2[1]));
+  return;
+}
+
+void multiplyMatrix_2x1_2x2(float M1[2], float M2[2][2], float returnMatriz[2]) {
+  returnMatriz[0] = ((M1[0] * M2[0][0])) + ((M1[1] * M2[1][0]));
+  returnMatriz[1] = ((M1[0] * M2[0][1])) + ((M1[1] * M2[1][1]));
   return;
 }
 
