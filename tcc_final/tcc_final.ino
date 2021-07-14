@@ -27,8 +27,8 @@
 #define CALIB_COV 13       // Led Amarelo - Calibração Matrizes de covariância
 #define STOPPED 2        // LED vermelho - indica que a pessoa parou
 #define MOVING 8          // LED Verde - Pessoa em movimento
-#define OFFSET_MOVING 0.25
-#define OFFSET_STOPPED 0.15
+#define OFFSET_MOVING 0.5
+#define OFFSET_STOPPED 0.1
 #define GPS_RX 4
 #define GPS_TX 3
 #define Serial_Baud 9600
@@ -207,7 +207,9 @@ void loop() {
       // Tem algum dado inválido
       // Serial.println("Dado inválido");
     }
-  } else {
+  }
+  // remoçao do segurador
+  else {
     yk_N[1] = 0;
     yk_E[1] = 0;
   }
