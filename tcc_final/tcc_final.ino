@@ -33,8 +33,8 @@
 #define GPS_TX 3
 #define Serial_Baud 9600
 
-//#define GRAPH_VISUALIZATION
-#define REAL_TEST
+#define GRAPH_VISUALIZATION
+//#define REAL_TEST
 //#define GRAPH_AXIS_N_VISUALIZATION
 //#define GRAPH_AXIS_E_VISUALIZATION
 
@@ -104,11 +104,7 @@ void setup() {
   #else
   delay(5000);
   #endif
-  // Matriz de covariância calculada
-
-  /*
-     GPS
-  */
+  
   digitalWrite(CALIB_PENDING, HIGH);
   // Armazena a Latitude e Longitude iniciais
   // Fica nesse loop até que seja possível receber algum dado do GPS
@@ -124,8 +120,6 @@ void setup() {
   gps.get_position(&original_posi_gps_E, &original_posi_gps_N);
   // Armazena as posições no eixo North e East no momento que é ligado o dispositivo
   // Cuidado: removi a verificação de erro
-//  original_posi_gps_N = (original_posi_gps_N == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : original_posi_gps_N);
-//  original_posi_gps_E = (original_posi_gps_E == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : original_posi_gps_E);
 
   // Nesse ponto já foram armazenadas as posições inicias do GPS
   digitalWrite(CALIB_PENDING, HIGH);
@@ -209,16 +203,17 @@ void loop() {
     }
   }
   // remoçao do segurador
+  /*
   else {
     yk_N[1] = 0;
     yk_E[1] = 0;
-  }
+  }*/
 
   // Leitura da MPU
   // Faz a aferição dos sensores
-  float acc_N, acc_E, acc_D;
+  float acc_N, acc_E;
   if (mpu_new.update_data()) {
-    mpu_new.make_conversion(&acc_N, &acc_E, &acc_D); // Faz a leitura dos acelerometro e a conversão das coordenadas
+    mpu_new.make_conversion(&acc_N, &acc_E); // Faz a leitura dos acelerometro e a conversão das coordenadas
   }
 
   // EVOLUÇÃO DOS ESTADOS - ACELERÔMETRO
@@ -389,8 +384,8 @@ void loop() {
   
   Serial.print(mod_vel_kalman, 6);     // kalman | azul
   Serial.print(" ");
-  Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
-  Serial.print(" ");
+  //Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
+  //Serial.print(" ");
   Serial.println(mod_gps_vel, 6);      // gps | verde
 #endif
 
@@ -525,10 +520,10 @@ void standard_deviation_gps() {
   }
 
   // Determina a matriz de covariância R (GPS)
-//  R_N[0] = _aux_DP_posi_gps_N / _acquires;  // posição
-//  R_N[1] = _aux_DP_vel_gps_N / _acquires;  // posição
-//  R_E[0] = _aux_DP_posi_gps_E / _acquires;  // posição
-//  R_E[1] = _aux_DP_vel_gps_E / _acquires;  // posição
+  R_N[0] = _aux_DP_posi_gps_N / _acquires;  // posição
+  R_N[1] = _aux_DP_vel_gps_N / _acquires;  // posição
+  R_E[0] = _aux_DP_posi_gps_E / _acquires;  // posição
+  R_E[1] = _aux_DP_vel_gps_E / _acquires;  // posição
 }
 
 
@@ -538,11 +533,11 @@ void standard_deviation_acc(char axis) {
   float _acc_acc_DP[_acquires];
 
   float _sum_acc_acc = 0.0;
-  float acc_N, acc_E, acc_D;
+  float acc_N, acc_E;
 
   for (char i = 0; i < _acquires;) {
     if (mpu_new.update_data()) {
-      mpu_new.make_conversion(&acc_N, &acc_E, &acc_D);
+      mpu_new.make_conversion(&acc_N, &acc_E);
       if (axis == 'N') _acc_acc_DP[i] = acc_N;
       else if (axis == 'E') _acc_acc_DP[i] = acc_E;
       
@@ -568,11 +563,11 @@ void standard_deviation_acc(char axis) {
 
   // Determinação da matriz Q de covariância
   if (axis == 'N') {
-//    Q_N[0] = DP_posi * DP_posi;  // variancia posição
-//    Q_N[1] = DP_vel * DP_vel;    // variancia velocidade
+    Q_N[0] = DP_posi * DP_posi;  // variancia posição
+    Q_N[1] = DP_vel * DP_vel;    // variancia velocidade
   } else {
-//    Q_E[0] = DP_posi * DP_posi;  // variancia posição
-//    Q_E[1] = DP_vel * DP_vel;    // variancia velocidade 
+    Q_E[0] = DP_posi * DP_posi;  // variancia posição
+    Q_E[1] = DP_vel * DP_vel;    // variancia velocidade 
   }
 }
 #endif

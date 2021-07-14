@@ -51,7 +51,7 @@ bool mpu_conv_class::config_mpu() {
     return true;
 }
 
-void mpu_conv_class::make_conversion(float *acc_N, float *acc_E, float *acc_D){
+void mpu_conv_class::make_conversion(float *acc_N, float *acc_E){
   float _phi, _theta, _psi; // angulos de euler
   /*
    float _rot[3][3] = { { 0.0, 0.0, 0.0 },
@@ -90,7 +90,7 @@ void mpu_conv_class::make_conversion(float *acc_N, float *acc_E, float *acc_D){
   
   *acc_N = (mpu.getAccX() * cos(_theta) * cos(_psi)) + (mpu.getAccY() * -(cos(_phi) * sin(_psi)) + (sin(_phi) * sin(_theta) * cos(_psi))) + (mpu.getAccZ() * (sin(_phi) * sin(_psi)) + (cos(_phi) * sin(_theta) * cos(_psi)));
   *acc_E = (mpu.getAccX() * cos(_theta) * sin(_psi)) + (mpu.getAccY() * (cos(_phi) * cos(_psi)) + (sin(_phi) * sin(_theta) * sin(_psi))) + (mpu.getAccZ() * -(sin(_phi) * cos(_psi)) + (cos(_phi) * sin(_theta) * sin(_psi)));
-  *acc_D = (mpu.getAccX() * -sin(_theta)) + (mpu.getAccY() * sin(_phi) * cos(_theta)) + (mpu.getAccZ() * cos(_phi) * cos(_theta)); 
+  //*acc_D = (mpu.getAccX() * -sin(_theta)) + (mpu.getAccY() * sin(_phi) * cos(_theta)) + (mpu.getAccZ() * cos(_phi) * cos(_theta)); 
 }
 
 bool mpu_conv_class::update_data() {

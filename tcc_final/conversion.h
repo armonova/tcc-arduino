@@ -15,7 +15,7 @@ class mpu_conv_class {
   public:
     mpu_conv_class(int calib_pending, int calib_done);
     bool config_mpu();
-    void make_conversion(float *acc_N, float *acc_E, float *acc_D);
+    void make_conversion(float *acc_N, float *acc_E);
     bool update_data();
     void returnCordCart(float mod, float *outN, float *outE, float refN, float refE);
     
