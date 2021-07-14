@@ -9,7 +9,7 @@
    Estado 1: LED VERMELHO aceso: calibrando Acelerômetro e Giroscópio - Deixar a placa parada
    Estado 2: LED VERMELHO E VERDE acesos: Calibrando o Magnetómetro - Fazer movimento em forma de um 8
    Estado 3: LED AMARELO E VERDE acesos: Calculando matrize de covariância
-   Estado 4: LED VERDE aceso: Calibração finalizada - Já pode utilizar o dispositivo
+   Estado 4: LED VERDE aceso: Calibração finalizada - Já pode utilizar o dispositivox'
 */
 
 /*
@@ -33,8 +33,8 @@
 #define GPS_TX 3
 #define Serial_Baud 9600
 
-#define GRAPH_VISUALIZATION
-//#define REAL_TEST
+//#define GRAPH_VISUALIZATION
+#define REAL_TEST
 //#define GRAPH_AXIS_N_VISUALIZATION
 //#define GRAPH_AXIS_E_VISUALIZATION
 
@@ -56,11 +56,11 @@ float original_posi_gps_E;
 
 // matriz "Q", de covariância
 float Q_N[2] = {0.1, 0.1};
-float R_N[2] = {0.1, 0.1};
+float R_N = 0.1;
 
 // matriz "Q", de covariância
 float Q_E[2] = {0.1, 0.1};
-float R_E[2] = {0.1, 0.1};
+float R_E = 0.1;
 
 void setup() {
   // Seta os pinos do led como output
@@ -293,57 +293,46 @@ void loop() {
   // K = P * C' * inv(C * P * C' + R);
   float C[2] = {0.0, 1.0};
 
-  float K_N[2][2];
-  float K_E[2][2];
+  float K_N[2];
+  float K_E[2];
   float K_aux_N[2];
   float K_aux_E[2];
   float aux_N;
   float aux_E;
   float aux_aux_N[2];
   float aux_aux_E[2];
-  multiplyMatrix_2x1_2x2(C, P_N, aux_aux_N);
-  multiplyMatrix_2x1_2x2(C, P_E, aux_aux_E);
-  //multiplyMatrix_2x2_2x2(aux_aux_N, C, aux_N);
-  //multiplyMatrix_2x2_2x2(aux_aux_E, C, aux_E);
-  
-  aux_N = aux_aux_N[1];
-  aux_E = aux_aux_E[1];
+  multiplyMatrix_1x2_2x2(C, P_N, aux_aux_N);
+  multiplyMatrix_1x2_2x2(C, P_E, aux_aux_E);
+  multiplyMatrix_1x2_2x1(aux_aux_N, C, &aux_N);
+  multiplyMatrix_1x2_2x1(aux_aux_E, C, &aux_E);
   
   aux_N += R_N;
   aux_E += R_E;
 
-  // TODO: FEITO ATÉ AQUI - evolução apenas com C = [0, 1]
-  float aux_inverse_N[2][2];
-  float aux_inverse_E[2][2];
-  inverseMatrix(aux_N, aux_inverse_N); // = inv(C * P * C' + R)
-  inverseMatrix(aux_E, aux_inverse_E); // = inv(C * P * C' + R)
-
-  multiplyMatrix_2x2_2x2(P_N, C, K_aux_N);
-  multiplyMatrix_2x2_2x2(K_aux_N, aux_inverse_N, K_N);
-  multiplyMatrix_2x2_2x2(P_E, C, K_aux_E);
-  multiplyMatrix_2x2_2x2(K_aux_E, aux_inverse_E, K_E);
+  multiplyMatrix_2x2_2x1(P_N, C, K_aux_N); // 4x4 * 2x1 = 2x1
+  multiplyMatrix_2x1_1x1(K_aux_N, aux_N, K_N); // 2x1 * 1 = 2x1
+  multiplyMatrix_2x2_2x1(P_E, C, K_aux_E);
+  multiplyMatrix_2x1_1x1(K_aux_E, aux_E, K_E);
 
   // % passo 4
   // [MATLAB]
   // z = C * xk_aux;
   // y = y_k(:,i);
   // new_x_k(:,i) = xk_aux + K * (C * y - z);
-  float z_N[2];
-  float z_E[2];
-  multiplyMatrix_2x2_2x1(C, xk_aux_N, z_N);
-  multiplyMatrix_2x2_2x1(C, xk_aux_E, z_E);
+  float z_N;
+  float z_E;
+  multiplyMatrix_1x2_2x1(C, xk_aux_N, &z_N); // C * xk_aux
+  multiplyMatrix_1x2_2x1(C, xk_aux_E, &z_E); // C * xk_aux
   float cXy_N[2];
-  float cXy_aux_N[2];
+  float cXy_aux_N;
   float cXy_E[2];
-  float cXy_aux_E[2];
-  multiplyMatrix_2x2_2x1(C, yk_N, cXy_aux_N);
-  multiplyMatrix_2x2_2x1(C, yk_E, cXy_aux_E);
-  cXy_aux_N[0] -= z_N[0];
-  cXy_aux_N[1] -= z_N[1];
-  cXy_aux_E[0] -= z_E[0];
-  cXy_aux_E[1] -= z_E[1];
-  multiplyMatrix_2x2_2x1(K_N, cXy_aux_N, cXy_N);
-  multiplyMatrix_2x2_2x1(K_E, cXy_aux_E, cXy_E);
+  float cXy_aux_E;
+  multiplyMatrix_1x2_2x1(C, yk_N, &cXy_aux_N);
+  multiplyMatrix_1x2_2x1(C, yk_E, &cXy_aux_E);
+  cXy_aux_N -= z_N;
+  cXy_aux_E -= z_E;
+  multiplyMatrix_2x1_1x1(K_N, cXy_aux_N, cXy_N);
+  multiplyMatrix_2x1_1x1(K_E, cXy_aux_E, cXy_E);
 
   xk_kalman_N[0] = xk_aux_N[0] + cXy_N[0]; // posição com o filtro de kalman
   xk_kalman_N[1] = xk_aux_N[1] + cXy_N[1]; // velocidade com o filtro de kalman
@@ -354,8 +343,8 @@ void loop() {
   // new_P_ant = (eye(size(Q)) - K * C) * P;
   float P_aux_N[2][2];
   float P_aux_E[2][2];
-  multiplyMatrix_2x2_2x2(K_N, C, P_aux_N);
-  multiplyMatrix_2x2_2x2(K_E, C, P_aux_E);
+  multiplyMatrix_2x1_1x2(K_N, C, P_aux_N);
+  multiplyMatrix_2x1_1x2(K_E, C, P_aux_E);
   P_aux_N[0][0] = 1 - P_aux_N[0][0];
   P_aux_N[0][1] = 0 - P_aux_N[0][1];
   P_aux_N[1][0] = 0 - P_aux_N[1][0];
@@ -515,10 +504,8 @@ void standard_deviation_gps() {
   }
 
   // Determina a matriz de covariância R (GPS)
-  R_N[0] = _aux_DP_posi_gps_N / _acquires;  // posição
-  R_N[1] = _aux_DP_vel_gps_N / _acquires;  // posição
-  R_E[0] = _aux_DP_posi_gps_E / _acquires;  // posição
-  R_E[1] = _aux_DP_vel_gps_E / _acquires;  // posição
+  R_N = _aux_DP_vel_gps_N / _acquires;  // posição
+  R_E = _aux_DP_vel_gps_E / _acquires;  // posição
 }
 
 
@@ -582,17 +569,27 @@ void multiplyMatrix_2x2_2x1(float M1[2][2], float M2[2], float returnMatriz[2]) 
   return;
 }
 
-void multiplyMatrix_2x1_2x2(float M1[2], float M2[2][2], float returnMatriz[2]) {
-  returnMatriz[0] = ((M1[0] * M2[0][0])) + ((M1[1] * M2[1][0]));
-  returnMatriz[1] = ((M1[0] * M2[0][1])) + ((M1[1] * M2[1][1]));
+void multiplyMatrix_2x1_1x1(float M1[2], float M2, float returnMatriz[2]) {
+  returnMatriz[0] = (M1[0] * M2);
+  returnMatriz[1] = (M1[1] * M2);
   return;
 }
 
-void inverseMatrix(float M[2][2], float retunInv[2][2]) {
-  retunInv[0][0] = (-M[1][1]) / ((M[1][0] * M[0][1]) - (M[0][0] * M[1][1]));  // a
-  retunInv[0][1] = (M[0][1]) / ((M[1][0] * M[0][1]) - (M[0][0] * M[1][1]));   // b
+void multiplyMatrix_1x2_2x1(float M1[2], float M2[2], float *returnMatriz) {
+  *returnMatriz = ((M1[0] * M2[0]) + (M1[1] * M2[1]));
+  return;
+}
 
-  retunInv[1][0] = (-M[1][0]) / ((M[1][1] * M[0][0]) - (M[0][1] * M[1][0]));  // c
-  retunInv[1][1] = (M[0][0]) / ((M[1][1] * M[0][0]) - (M[0][1] * M[1][0]));   // d
+void multiplyMatrix_2x1_1x2(float M1[2], float M2[2], float returnMatriz[2][2]) {
+  returnMatriz[0][0] = (M1[0] * M2[0]);
+  returnMatriz[0][1] = (M1[0] * M2[1]);
+  returnMatriz[1][0] = (M1[1] * M2[0]);
+  returnMatriz[1][1] = (M1[1] * M2[1]);
+  return;
+}
+
+void multiplyMatrix_1x2_2x2(float M1[2], float M2[2][2], float returnMatriz[2]) {
+  returnMatriz[0] = ((M1[0] * M2[0][0])) + ((M1[1] * M2[1][0]));
+  returnMatriz[1] = ((M1[0] * M2[0][1])) + ((M1[1] * M2[1][1]));
   return;
 }
