@@ -33,8 +33,8 @@
 #define GPS_TX 3
 #define Serial_Baud 9600
 
-//#define GRAPH_VISUALIZATION
-#define REAL_TEST
+#define GRAPH_VISUALIZATION
+//#define REAL_TEST
 //#define GRAPH_AXIS_N_VISUALIZATION
 //#define GRAPH_AXIS_E_VISUALIZATION
 
@@ -368,8 +368,8 @@ void loop() {
   
   Serial.print(mod_vel_kalman, 6);     // kalman | azul
   Serial.print(" ");
-  //Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
-  //Serial.print(" ");
+  Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
+  Serial.print(" ");
   Serial.println(mod_gps_vel, 6);      // gps | verde
 #endif
 
