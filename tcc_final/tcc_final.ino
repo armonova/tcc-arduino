@@ -384,8 +384,8 @@ void loop() {
   
   Serial.print(mod_vel_kalman, 6);     // kalman | azul
   Serial.print(" ");
-  //Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
-  //Serial.print(" ");
+  Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
+  Serial.print(" ");
   Serial.println(mod_gps_vel, 6);      // gps | verde
 #endif
 
