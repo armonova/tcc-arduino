@@ -309,7 +309,7 @@ void loop() {
   aux_N += R_N;
   aux_E += R_E;
 
-  multiplyMatrix_2x2_2x1(P_N, C, K_aux_N); // 4x4 * 2x1 = 2x1
+  multiplyMatrix_2x2_2x1(P_N, C, K_aux_N); // 2x2 * 2x1 = 2x1
   multiplyMatrix_2x1_1x1(K_aux_N, aux_N, K_N); // 2x1 * 1 = 2x1
   multiplyMatrix_2x2_2x1(P_E, C, K_aux_E);
   multiplyMatrix_2x1_1x1(K_aux_E, aux_E, K_E);
@@ -341,6 +341,7 @@ void loop() {
 
   // passo 5
   // new_P_ant = (eye(size(Q)) - K * C) * P;
+  // new_P_ant = (I - K * C) * P
   float P_aux_N[2][2];
   float P_aux_E[2][2];
   multiplyMatrix_2x1_1x2(K_N, C, P_aux_N);
