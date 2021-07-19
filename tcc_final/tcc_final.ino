@@ -177,7 +177,7 @@ void loop() {
 
   // Faz uma medição a cada 100 ms = 100Hz
   // Precisei fazer essa alteração pois estava havendo delay na leitura do GPS e da MPU
-  delay(100);
+  delay(100); // @TODO Fazer utilizando o millis IMPORTANTE
 
   // Leitura do GPS
   // TODO: arrumar um jeito de não travar o programa aqui (interrupção ?)
