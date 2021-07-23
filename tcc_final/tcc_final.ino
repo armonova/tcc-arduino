@@ -127,35 +127,36 @@ void setup() {
   digitalWrite(CALIB_COV, HIGH);
 }
 
-// [linhas][colunas]
-float new_P_ant_N[2][2] = {
-  {1.0, 0.0},
-  {0.0, 1.0}
-};
-float new_P_ant_E[2][2] = {
-  {1.0, 0.0},
-  {0.0, 1.0}
-};
-
-
-float xk_kalman_N[2] = { 0.0, 0.0 };
-float xk_kalman_E[2] = { 0.0, 0.0 };
-
-float xk_N[2] = { 0.0, 0.0 };
-float xk_E[2] = { 0.0, 0.0 };
-
-// Matriz de estados
-// gps
-float yk_N[2] = { 0.0 , 0.0 };
-float yk_E[2] = { 0.0 , 0.0 };
-
-int calibration_measurements = 10;
-char loop_count = 0;
-float threshold_array[10];
-float threshold;
-bool calibration_pending = true;
 
 void loop() {
+  // [linhas][colunas]
+  // Variáveis estáticas TODO testar para ver se usar static variables atrapalha em algo
+  static float new_P_ant_N[2][2] = {
+    {1.0, 0.0},
+    {0.0, 1.0}
+  };
+  static float new_P_ant_E[2][2] = {
+    {1.0, 0.0},
+    {0.0, 1.0}
+  };
+  
+  
+  static float xk_kalman_N[2] = { 0.0, 0.0 };
+  static float xk_kalman_E[2] = { 0.0, 0.0 };
+  
+  static float xk_N[2] = { 0.0, 0.0 };
+  static float xk_E[2] = { 0.0, 0.0 };
+  
+  // Matriz de estados
+  // gps
+  static float yk_N[2] = { 0.0 , 0.0 };
+  static float yk_E[2] = { 0.0 , 0.0 };
+  
+  static int calibration_measurements = 10;
+  static char loop_count = 0;
+  static float threshold_array[10];
+  static float threshold;
+  static bool calibration_pending = true;
   /*
    * TESTE: MATRIZ Q e R
    * para deixar as matriz com os mesmos pesos
