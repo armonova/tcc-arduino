@@ -151,7 +151,7 @@ float threshold_array[10];
 float threshold;
 bool calibration_pending = true;
 
-float millisAux;
+float millisAux = 0.0;
 void loop() {
   /*
    * TESTE: MATRIZ Q e R
