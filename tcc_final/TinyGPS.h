@@ -69,7 +69,6 @@ private:
   long _latitude, _new_latitude;
   long _longitude, _new_longitude;
   unsigned long  _speed, _new_speed;
-  unsigned long _last_position_fix, _new_position_fix;
 
   // parsing state variables
   byte _parity;

@@ -147,7 +147,6 @@ bool TinyGPS::term_complete()
     {
       if (_gps_data_good)
       {
-        _last_position_fix = _new_position_fix;
 
         switch(_sentence_type)
         {
@@ -189,7 +188,6 @@ bool TinyGPS::term_complete()
     case COMBINE(_GPS_SENTENCE_GPRMC, 3): // Latitude
     case COMBINE(_GPS_SENTENCE_GPGGA, 2):
       _new_latitude = parse_degrees();
-      _new_position_fix = millis();
       break;
     case COMBINE(_GPS_SENTENCE_GPRMC, 4): // N/S
     case COMBINE(_GPS_SENTENCE_GPGGA, 3):
