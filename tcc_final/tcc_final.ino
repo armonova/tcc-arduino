@@ -315,12 +315,16 @@ void loop() {
   z_E[1] = xk_aux_E[1];
   float cXy_N[2];
   float cXy_E[2];
-  yk_N[0] -= z_N[0];
-  yk_N[1] -= z_N[1];
-  yk_E[0] -= z_E[0];
-  yk_E[1] -= z_E[1];
-  multiplyMatrix_2x2_2x1(K_N, yk_N, cXy_N);
-  multiplyMatrix_2x2_2x1(K_E, yk_E, cXy_E);
+  float cXy_aux_N[2];
+  float cXy_aux_E[2];
+  
+  cXy_aux_N[0] = yk_N[0] - z_N[0];
+  cXy_aux_N[1] = yk_N[1] - z_N[1];
+  cXy_aux_E[0] = yk_E[0] - z_E[0];
+  cXy_aux_E[1] = yk_E[1] - z_E[1];
+  
+  multiplyMatrix_2x2_2x1(K_N, cXy_aux_N, cXy_N);
+  multiplyMatrix_2x2_2x1(K_E, cXy_aux_E, cXy_E);
 
   xk_kalman_N[0] = xk_aux_N[0] + cXy_N[0]; // posição com o filtro de kalman
   xk_kalman_N[1] = xk_aux_N[1] + cXy_N[1]; // velocidade com o filtro de kalman
