@@ -234,10 +234,10 @@ void loop() {
   };
 
   // Determinação de x_k - evolução dos estados
-  xk_N[0] = ((A[0][0] * xk_ant_N[0]) + (A[0][1] * xk_ant_N[1])) + (B_0 * acc_N); // posição
-  xk_N[1] = ((A[1][0] * xk_ant_N[0]) + (A[1][1] * xk_ant_N[1])) + (B_1 * acc_N); // velocidade
-  xk_E[0] = ((A[0][0] * xk_ant_E[0]) + (A[0][1] * xk_ant_E[1])) + (B_0 * acc_E); // posição
-  xk_E[1] = ((A[1][0] * xk_ant_E[0]) + (A[1][1] * xk_ant_E[1])) + (B_1 * acc_E); // velocidade
+  xk_N[0] = (xk_ant_N[0]) + (B_1 * xk_ant_N[1]) + (B_0 * acc_N); // posição
+  xk_N[1] = (xk_ant_N[1]) + (B_1 * acc_N); // velocidade
+  xk_E[0] = (xk_ant_E[0]) + (B_1 * xk_ant_E[1]) + (B_0 * acc_E); // posição
+  xk_E[1] = (xk_ant_E[1]) + (B_1 * acc_E); // velocidade
 
 
   /* Nesse ponto do código eu tenho a evolução dos estados do acelerômetro e GPS para
