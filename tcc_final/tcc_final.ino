@@ -41,8 +41,8 @@
 #define CALC_SD
 
 // matriz "B", de entrada
-#define B_0 0.005     // (0.1)² / 2 => (delta t)²/2
-#define B_1 0.1  // delta t
+//#define B_0 0.005     // (0.1)² / 2 => (delta t)²/2
+//#define B_1 0.1  // delta t
 
 // Classe para conversão da biblioteca do MPU
 mpu_conv_class mpu_new(CALIB_PENDING, CALIB_DONE);
@@ -155,6 +155,8 @@ float threshold_array[10];
 float threshold;
 bool calibration_pending = true;
 
+float millisAux = 0.0;
+
 void loop() {
   /*
    * TESTE: MATRIZ Q e R
@@ -164,16 +166,6 @@ void loop() {
   // Variáveis
   bool newGpsData = false;
   float posi_gps_E, posi_gps_N;
-
-  // matriz "A", de estado (0.1 = período de amostragem)
-  float A[2][2] = {
-    { 1.0,  0.1 },
-    { 0.0,  1.0 }
-  };
-  float A_trasnp[2][2] = {
-    { 1.0,  0.0 },
-    { 0.1,  1.0 }
-  };
 
   // Faz uma medição a cada 100 ms = 100Hz
   // Precisei fazer essa alteração pois estava havendo delay na leitura do GPS e da MPU
@@ -224,11 +216,22 @@ void loop() {
   xk_ant_E[0] = xk_E[0]; // posição
   xk_ant_E[1] = xk_E[1]; // velocidade
 
-  // Matriz "u"
-  /*
-    float acc_N = acc_N;
-    float u_E = acc_E;
-  */
+ 
+  float interval = millis() - millisAux;
+  if (millisAux == 0.0) interval = 0.0;
+  millisAux = millis();
+  float B_1 = interval / 1000.0;
+  float B_0 = pow(B_1, 2) / 2;    // (0.1)² / 2 => (delta t)²/2
+
+  // matriz "A", de estado (0.1 = período de amostragem)
+  float A[2][2] = {
+    { 1.0,  B_1 },
+    { 0.0,  1.0 }
+  };
+  float A_trasnp[2][2] = {
+    { 1.0,  0.0 },
+    { B_1,  1.0 }
+  };
 
   // Determinação de x_k - evolução dos estados
   xk_N[0] = ((A[0][0] * xk_ant_N[0]) + (A[0][1] * xk_ant_N[1])) + (B_0 * acc_N); // posição
