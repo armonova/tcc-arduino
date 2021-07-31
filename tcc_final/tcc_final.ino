@@ -352,11 +352,11 @@ void loop() {
   float mod_acc_vel = sqrt((pow(xk_N[1], 2)) + (pow(xk_E[1], 2))); // PREDIÇÃO
   float mod_gps_vel = sqrt((pow(yk_N[1], 2)) + (pow(yk_E[1], 2))); // SENSOR
   
-  Serial.print(mod_vel_kalman);     // kalman | azul
+  Serial.print(mod_vel_kalman, 6);     // kalman | azul
   Serial.print(" ");
-  Serial.print(mod_acc_vel);        // acelerometro | vermelho
+  Serial.print(mod_acc_vel, 6);        // acelerometro | vermelho
   Serial.print(" ");
-  Serial.println(mod_gps_vel);      // gps | verde
+  Serial.println(mod_gps_vel, 6);      // gps | verde
 #endif
 
 #ifdef GRAPH_AXIS_N_VISUALIZATION
