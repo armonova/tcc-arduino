@@ -38,10 +38,11 @@
 //#define GRAPH_AXIS_N_VISUALIZATION
 //#define GRAPH_AXIS_E_VISUALIZATION
 
+// determina se vou fazer o cálculo do desvio padrão ou não
 #define CALC_SD
 
 // matriz "B", de entrada
-#define B 0.1  // delta t
+//#define B 0.1  // delta t
 
 // Classe para conversão da biblioteca do MPU
 mpu_conv_class mpu_new(CALIB_PENDING, CALIB_DONE);
@@ -60,6 +61,8 @@ float R_N = 0.1;
 // matriz "Q", de covariância
 float Q_E = 0.1;
 float R_E = 0.1;
+
+
 
 void setup() {
   // Seta os pinos do led como output
@@ -148,6 +151,7 @@ float threshold_array[10];
 float threshold;
 bool calibration_pending = true;
 
+float millisAux;
 void loop() {
   /*
    * TESTE: MATRIZ Q e R
@@ -181,9 +185,6 @@ void loop() {
       // TODO: usar um angulo correto instead of yk[0] - posição - Precisa ser ou o ângulo do mag. ou a velocidade que vem do acelerômetro
       // TODO: Fazer baseado na velocidade do acelerômetro
       mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N, &yk_E, xk_kalman_N, xk_kalman_E);
-    } else {
-      // Tem algum dado inválido
-      // Serial.println("Dado inválido");
     }
   }
 
@@ -200,9 +201,14 @@ void loop() {
   xk_ant_N = xk_N; // velocidade
   xk_ant_E = xk_E; // velocidade
 
+  
+  float interval = millis() - millisAux;
+  if (millisAux == 0.0) interval = 0.0;
+  millisAux = millis();
+  float B = interval / 1000.0;
   // Determinação de x_k - evolução dos estados
-  xk_N = ((A * xk_ant_N) + (A * xk_ant_N)) + (B * acc_N); // velocidade
-  xk_E = ((A * xk_ant_E) + (A * xk_ant_E)) + (B * acc_E); // velocidade
+  xk_N = (A * xk_ant_N) + (B * acc_N); // velocidade
+  xk_E = (A * xk_ant_E) + (B * acc_E); // velocidade
 
   /* Nesse ponto do código eu tenho a evolução dos estados do acelerômetro e GPS para
      a determinação da velocidade e da posição.
@@ -244,8 +250,6 @@ void loop() {
   float K_E;
   float K_aux_N;
   float K_aux_E;
-  float aux_N;
-  float aux_E;
   float aux_aux_N;
   float aux_aux_E;
 
@@ -346,7 +350,7 @@ void loop() {
 
 #ifdef CALC_SD
 void standard_deviation_gps() {
-  char _acquires = 15; // número de aquisição para cálculo do desvio padrão
+  char _acquires = 50; // número de aquisição para cálculo do desvio padrão
 
   float _posi_gps_DP_N[_acquires];
   float _posi_gps_DP_E[_acquires];
@@ -392,29 +396,20 @@ void standard_deviation_gps() {
       // Fazer a evolução junto com o acelerometro? - Lembrando que nesse ponto a plaquinha deveria ser considerada como parada
       mpu_new.returnCordCart(gps.f_speed_mps(), &_vel_gps_DP_N[i], &_vel_gps_DP_E[i], vel_instant_N, vel_instant_E);
 
-      _sum_posi_gps_N += _posi_gps_DP_N[i];
       _sum_vel_gps_N += _vel_gps_DP_N[i];
-      _sum_posi_gps_E += _posi_gps_DP_E[i];
       _sum_vel_gps_E += _vel_gps_DP_E[i];
       i++;
     }
   }
 
-  float _avg_posi_gps_N = _sum_posi_gps_N / _acquires;
   float _avg_vel_gps_N = _sum_vel_gps_N / _acquires;
-  float _avg_posi_gps_E = _sum_posi_gps_E / _acquires;
   float _avg_vel_gps_E = _sum_vel_gps_E / _acquires;
 
-
-  float _aux_DP_posi_gps_N = 0.0;
   float _aux_DP_vel_gps_N = 0.0;
-  float _aux_DP_posi_gps_E = 0.0;
   float _aux_DP_vel_gps_E = 0.0;
 
   for (char i = 0; i < _acquires; i++) {
-    _aux_DP_posi_gps_N += (_posi_gps_DP_N[i] - _avg_posi_gps_N) * (_posi_gps_DP_N[i] - _avg_posi_gps_N);
     _aux_DP_vel_gps_N += (_vel_gps_DP_N[i] - _avg_vel_gps_N) * (_vel_gps_DP_N[i] - _avg_vel_gps_N);
-    _aux_DP_posi_gps_E += (_posi_gps_DP_E[i] - _avg_posi_gps_E) * (_posi_gps_DP_E[i] - _avg_posi_gps_E);
     _aux_DP_vel_gps_E += (_vel_gps_DP_E[i] - _avg_vel_gps_E) * (_vel_gps_DP_E[i] - _avg_vel_gps_E);
   }
 
@@ -425,7 +420,7 @@ void standard_deviation_gps() {
 
 
 void standard_deviation_acc(char axis) {
-  char _acquires = 15; // número de aquisição para cálculo do desvio padrão
+  char _acquires = 50; // número de aquisição para cálculo do desvio padrão
 
   float _acc_acc_DP[_acquires];
 
