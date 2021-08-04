@@ -71,7 +71,6 @@ private:
   unsigned long  _speed, _new_speed;
   unsigned long _last_position_fix, _new_position_fix;
 
-
   // parsing state variables
   byte _parity;
   bool _is_checksum_term;

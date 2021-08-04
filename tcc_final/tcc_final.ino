@@ -9,7 +9,7 @@
    Estado 1: LED VERMELHO aceso: calibrando Acelerômetro e Giroscópio - Deixar a placa parada
    Estado 2: LED VERMELHO E VERDE acesos: Calibrando o Magnetómetro - Fazer movimento em forma de um 8
    Estado 3: LED AMARELO E VERDE acesos: Calculando matrize de covariância
-   Estado 4: LED VERDE aceso: Calibração finalizada - Já pode utilizar o dispositivo
+   Estado 4: LED VERDE aceso: Calibração finalizada - Já pode utilizar o dispositivox'
 */
 
 /*
@@ -41,7 +41,8 @@
 #define CALC_SD
 
 // matriz "B", de entrada
-// agora é definida em tempo de execução
+//#define B_0 0.005     // (0.1)² / 2 => (delta t)²/2
+//#define B_1 0.1  // delta t
 
 // Classe para conversão da biblioteca do MPU
 mpu_conv_class mpu_new(CALIB_PENDING, CALIB_DONE);
@@ -55,11 +56,11 @@ float original_posi_gps_E;
 
 // matriz "Q", de covariância
 float Q_N[2] = {0.1, 0.1};
-float R_N[2] = {0.1, 0.1};
+float R_N = 0.1;
 
 // matriz "Q", de covariância
 float Q_E[2] = {0.1, 0.1};
-float R_E[2] = {0.1, 0.1};
+float R_E = 0.1;
 
 void setup() {
   // Seta os pinos do led como output
@@ -111,7 +112,8 @@ void setup() {
   while (!newData) {
     delay(100);
     while (gpsSerial.available()) {
-      if (gps.encode(gpsSerial.read())) // Atribui true para newData caso novos dados sejam recebidos
+      char c = gpsSerial.read();
+      if (gps.encode(c)) // Atribui true para newData caso novos dados sejam recebidos
         newData = true;
     }
   }
@@ -125,38 +127,37 @@ void setup() {
   digitalWrite(CALIB_COV, HIGH);
 }
 
-#ifdef REAL_TEST
+// [linhas][colunas]
+float new_P_ant_N[2][2] = {
+  {1.0, 0.0},
+  {0.0, 1.0}
+};
+float new_P_ant_E[2][2] = {
+  {1.0, 0.0},
+  {0.0, 1.0}
+};
+
+
+float xk_kalman_N[2] = { 0.0, 0.0 };
+float xk_kalman_E[2] = { 0.0, 0.0 };
+
+float xk_N[2] = { 0.0, 0.0 };
+float xk_E[2] = { 0.0, 0.0 };
+
+// Matriz de estados
+// gps
+float yk_N[2] = { 0.0 , 0.0 };
+float yk_E[2] = { 0.0 , 0.0 };
+
 int calibration_measurements = 10;
 char loop_count = 0;
 float threshold_array[10];
 float threshold;
-bool calibration_pending = true;a
-#endif
+bool calibration_pending = true;
+
+float millisAux = 0.0;
 
 void loop() {
-  // [linhas][colunas]
-  // Variáveis estáticas TODO testar para ver se usar static variables atrapalha em algo
-  static float new_P_ant_N[2][2] = {
-    {1.0, 0.0},
-    {0.0, 1.0}
-  };
-  static float new_P_ant_E[2][2] = {
-    {1.0, 0.0},
-    {0.0, 1.0}
-  };
-  
-  static long millisAux = 0.0;
-  static float xk_kalman_N[2] = { 0.0, 0.0 };
-  static float xk_kalman_E[2] = { 0.0, 0.0 };
-  
-  static float xk_N[2] = { 0.0, 0.0 };
-  static float xk_E[2] = { 0.0, 0.0 };
-  
-  // Matriz de estados
-  // gps
-  static float yk_N[2] = { 0.0 , 0.0 };
-  static float yk_E[2] = { 0.0 , 0.0 };
-  
   /*
    * TESTE: MATRIZ Q e R
    * para deixar as matriz com os mesmos pesos
@@ -168,12 +169,13 @@ void loop() {
 
   // Faz uma medição a cada 100 ms = 100Hz
   // Precisei fazer essa alteração pois estava havendo delay na leitura do GPS e da MPU
-  delay(100); // @TODO Fazer utilizando o millis IMPORTANTE
+  delay(100);
 
   // Leitura do GPS
   // TODO: arrumar um jeito de não travar o programa aqui (interrupção ?)
   while (gpsSerial.available()) {
-    if (gps.encode(gpsSerial.read())) // Atribui true para newData caso novos dados sejam recebidos
+    char c = gpsSerial.read();
+    if (gps.encode(c)) // Atribui true para newData caso novos dados sejam recebidos
       newGpsData = true;
   }
   if (newGpsData) {
@@ -183,12 +185,21 @@ void loop() {
 
       yk_N[0] = posi_gps_N - original_posi_gps_N;
       yk_E[0] = posi_gps_E - original_posi_gps_E;
+
+      // TODO: usar um angulo correto instead of yk[0] - posição - Precisa ser ou o ângulo do mag. ou a velocidade que vem do acelerômetro
+      // TODO: Fazer baseado na velocidade do acelerômetro
       mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N[1], &yk_E[1], xk_kalman_N[1], xk_kalman_E[1]);
     } else {
       // Tem algum dado inválido
       // Serial.println("Dado inválido");
     }
   }
+  // remoçao do segurador
+  /*
+  else {
+    yk_N[1] = 0;
+    yk_E[1] = 0;
+  }*/
 
   // Leitura da MPU
   // Faz a aferição dos sensores
@@ -205,12 +216,14 @@ void loop() {
   xk_ant_E[0] = xk_E[0]; // posição
   xk_ant_E[1] = xk_E[1]; // velocidade
 
-  // Matriz "u"
-  float B_1 = (millisAux == 0.0 ? 0.0 : (millis() - millisAux)) / 1000.0;
-  float B_0 = pow(B_1, 2)/ 2; // => (delta t)²/2
+ 
+  float interval = millis() - millisAux;
+  if (millisAux == 0.0) interval = 0.0;
   millisAux = millis();
+  float B_1 = interval / 1000.0;
+  float B_0 = pow(B_1, 2) / 2;    // (0.1)² / 2 => (delta t)²/2
 
-    // matriz "A", de estado (0.1 = período de amostragem)
+  // matriz "A", de estado (0.1 = período de amostragem)
   float A[2][2] = {
     { 1.0,  B_1 },
     { 0.0,  1.0 }
@@ -268,63 +281,61 @@ void loop() {
 
   // (A * new_P_ant * A') + Q
   P_N[0][0] += Q_N[0];
+  //P_N[0][1] += Q_N[0][1]; = 0
+  //P_N[1][0] += Q_N[1][0]; = 0
   P_N[1][1] += Q_N[1];
   //--
   P_E[0][0] += Q_E[0];
+  //P_E[0][1] += Q_E[0][1]; = 0
+  //P_E[1][0] += Q_E[1][0]; = 0
   P_E[1][1] += Q_E[1];
 
 
   /************************ C O R R E Ç Ã O ************************/
   // passo 3
-  // K = P * C' * inv(C * P * C' + R); 
-  // inv(C * P * C' + R) => inv(P + R)
+  // K = P * C' * inv(C * P * C' + R);
+  float C[2] = {0.0, 1.0};
 
-  float K_N[2][2];
-  float K_E[2][2];
-  float aux_N[2][2];
-  float aux_E[2][2];
-  aux_N[0][0] = P_N[0][0] + R_N[0];
-  aux_N[1][0] = P_N[1][0];
-  aux_N[1][1] = P_N[1][1] + R_N[1];
-  aux_N[0][1] = P_N[0][1];
+  float K_N[2];
+  float K_E[2];
+  float K_aux_N[2];
+  float K_aux_E[2];
+  float aux_N;
+  float aux_E;
+  float aux_aux_N[2];
+  float aux_aux_E[2];
+  multiplyMatrix_1x2_2x2(C, P_N, aux_aux_N);
+  multiplyMatrix_1x2_2x2(C, P_E, aux_aux_E);
+  multiplyMatrix_1x2_2x1(aux_aux_N, C, &aux_N);
+  multiplyMatrix_1x2_2x1(aux_aux_E, C, &aux_E);
+  
+  aux_N += R_N;
+  aux_E += R_E;
 
-  aux_E[0][0] = P_E[0][0] + R_E[0];
-  aux_E[1][0] = P_E[1][0];
-  aux_E[1][1] = P_E[1][1] + R_E[1];
-  aux_E[0][1] = P_E[0][1];
-
-  float aux_inverse_N[2][2];
-  float aux_inverse_E[2][2];
-  inverseMatrix(aux_N, aux_inverse_N); // = inv(C * P * C' + R)
-  inverseMatrix(aux_E, aux_inverse_E); // = inv(C * P * C' + R)
-
-  multiplyMatrix_2x2_2x2(P_N, aux_inverse_N, K_N);
-  multiplyMatrix_2x2_2x2(P_E, aux_inverse_E, K_E);
+  multiplyMatrix_2x2_2x1(P_N, C, K_aux_N); // 2x2 * 2x1 = 2x1
+  multiplyMatrix_2x1_1x1(K_aux_N, aux_N, K_N); // 2x1 * 1 = 2x1
+  multiplyMatrix_2x2_2x1(P_E, C, K_aux_E);
+  multiplyMatrix_2x1_1x1(K_aux_E, aux_E, K_E);
 
   // % passo 4
   // [MATLAB]
   // z = C * xk_aux;
   // y = y_k(:,i);
   // new_x_k(:,i) = xk_aux + K * (C * y - z);
-  float z_N[2];
-  float z_E[2];
-  z_N[0] = xk_aux_N[0];
-  z_N[1] = xk_aux_N[1];
-
-  z_E[0] = xk_aux_E[0];
-  z_E[1] = xk_aux_E[1];
+  float z_N;
+  float z_E;
+  multiplyMatrix_1x2_2x1(C, xk_aux_N, &z_N); // C * xk_aux
+  multiplyMatrix_1x2_2x1(C, xk_aux_E, &z_E); // C * xk_aux
   float cXy_N[2];
+  float cXy_aux_N;
   float cXy_E[2];
-  float cXy_aux_N[2];
-  float cXy_aux_E[2];
-  
-  cXy_aux_N[0] = yk_N[0] - z_N[0];
-  cXy_aux_N[1] = yk_N[1] - z_N[1];
-  cXy_aux_E[0] = yk_E[0] - z_E[0];
-  cXy_aux_E[1] = yk_E[1] - z_E[1];
-  
-  multiplyMatrix_2x2_2x1(K_N, cXy_aux_N, cXy_N);
-  multiplyMatrix_2x2_2x1(K_E, cXy_aux_E, cXy_E);
+  float cXy_aux_E;
+  multiplyMatrix_1x2_2x1(C, yk_N, &cXy_aux_N);
+  multiplyMatrix_1x2_2x1(C, yk_E, &cXy_aux_E);
+  cXy_aux_N -= z_N;
+  cXy_aux_E -= z_E;
+  multiplyMatrix_2x1_1x1(K_N, cXy_aux_N, cXy_N);
+  multiplyMatrix_2x1_1x1(K_E, cXy_aux_E, cXy_E);
 
   xk_kalman_N[0] = xk_aux_N[0] + cXy_N[0]; // posição com o filtro de kalman
   xk_kalman_N[1] = xk_aux_N[1] + cXy_N[1]; // velocidade com o filtro de kalman
@@ -333,17 +344,20 @@ void loop() {
 
   // passo 5
   // new_P_ant = (eye(size(Q)) - K * C) * P;
+  // new_P_ant = (I - K * C) * P
   float P_aux_N[2][2];
   float P_aux_E[2][2];
-  P_aux_N[0][0] = 1 - K_N[0][0];
-  P_aux_N[0][1] = 0 - K_N[0][1];
-  P_aux_N[1][0] = 0 - K_N[1][0];
-  P_aux_N[1][1] = 1 - K_N[1][1];
+  multiplyMatrix_2x1_1x2(K_N, C, P_aux_N);
+  multiplyMatrix_2x1_1x2(K_E, C, P_aux_E);
+  P_aux_N[0][0] = 1 - P_aux_N[0][0];
+  P_aux_N[0][1] = 0 - P_aux_N[0][1];
+  P_aux_N[1][0] = 0 - P_aux_N[1][0];
+  P_aux_N[1][1] = 1 - P_aux_N[1][1];
 
-  P_aux_E[0][0] = 1 - K_E[0][0];
-  P_aux_E[0][1] = 0 - K_E[0][1];
-  P_aux_E[1][0] = 0 - K_E[1][0];
-  P_aux_E[1][1] = 1 - K_E[1][1];
+  P_aux_E[0][0] = 1 - P_aux_E[0][0];
+  P_aux_E[0][1] = 0 - P_aux_E[0][1];
+  P_aux_E[1][0] = 0 - P_aux_E[1][0];
+  P_aux_E[1][1] = 1 - P_aux_E[1][1];
   multiplyMatrix_2x2_2x2(P_aux_N, P_N, new_P_ant_N);
   multiplyMatrix_2x2_2x2(P_aux_E, P_E, new_P_ant_E);
 
@@ -352,9 +366,9 @@ void loop() {
   digitalWrite(CALIB_DONE, LOW);
   digitalWrite(CALIB_COV, LOW);
   
-  float mod_vel_kalman = sqrt((pow(xk_kalman_N[1], 2)) + (pow(xk_kalman_E[1],2)));
-  float mod_acc_vel = sqrt((pow(xk_N[1], 2)) + (pow(xk_E[1], 2))); // PREDIÇÃO
-  float mod_gps_vel = sqrt((pow(yk_N[1], 2)) + (pow(yk_E[1], 2))); // SENSOR
+  float mod_vel_kalman = sqrt((xk_kalman_N[1] * xk_kalman_N[1]) + (xk_kalman_E[1] * xk_kalman_E[1]));
+  float mod_acc_vel = sqrt((xk_N[1] * xk_N[1]) + (xk_E[1] * xk_E[1])); // PREDIÇÃO
+  float mod_gps_vel = sqrt((yk_N[1] * yk_N[1]) + (yk_E[1] * yk_E[1])); // SENSOR
   
   Serial.print(mod_vel_kalman, 6);     // kalman | azul
   Serial.print(" ");
@@ -440,7 +454,8 @@ void standard_deviation_gps() {
     while (!newData) {
       for (unsigned long start = millis(); millis() - start < 100;) {
         while (gpsSerial.available()) {
-          if (gps.encode(gpsSerial.read())) // Atribui true para newData caso novos dados sejam recebidos
+          char c = gpsSerial.read();
+          if (gps.encode(c)) // Atribui true para newData caso novos dados sejam recebidos
             newData = true;
         }
       }
@@ -493,10 +508,8 @@ void standard_deviation_gps() {
   }
 
   // Determina a matriz de covariância R (GPS)
-  R_N[0] = _aux_DP_posi_gps_N / _acquires;  // posição
-  R_N[1] = _aux_DP_vel_gps_N / _acquires;  // posição
-  R_E[0] = _aux_DP_posi_gps_E / _acquires;  // posição
-  R_E[1] = _aux_DP_vel_gps_E / _acquires;  // posição
+  R_N = _aux_DP_vel_gps_N / _acquires;  // posição
+  R_E = _aux_DP_vel_gps_E / _acquires;  // posição
 }
 
 
@@ -560,11 +573,27 @@ void multiplyMatrix_2x2_2x1(float M1[2][2], float M2[2], float returnMatriz[2]) 
   return;
 }
 
-void inverseMatrix(float M[2][2], float retunInv[2][2]) {
-  retunInv[0][0] = (-M[1][1]) / ((M[1][0] * M[0][1]) - (M[0][0] * M[1][1]));  // a
-  retunInv[0][1] = (M[0][1]) / ((M[1][0] * M[0][1]) - (M[0][0] * M[1][1]));   // b
+void multiplyMatrix_2x1_1x1(float M1[2], float M2, float returnMatriz[2]) {
+  returnMatriz[0] = (M1[0] * M2);
+  returnMatriz[1] = (M1[1] * M2);
+  return;
+}
 
-  retunInv[1][0] = (-M[1][0]) / ((M[1][1] * M[0][0]) - (M[0][1] * M[1][0]));  // c
-  retunInv[1][1] = (M[0][0]) / ((M[1][1] * M[0][0]) - (M[0][1] * M[1][0]));   // d
+void multiplyMatrix_1x2_2x1(float M1[2], float M2[2], float *returnMatriz) {
+  *returnMatriz = ((M1[0] * M2[0]) + (M1[1] * M2[1]));
+  return;
+}
+
+void multiplyMatrix_2x1_1x2(float M1[2], float M2[2], float returnMatriz[2][2]) {
+  returnMatriz[0][0] = (M1[0] * M2[0]);
+  returnMatriz[0][1] = (M1[0] * M2[1]);
+  returnMatriz[1][0] = (M1[1] * M2[0]);
+  returnMatriz[1][1] = (M1[1] * M2[1]);
+  return;
+}
+
+void multiplyMatrix_1x2_2x2(float M1[2], float M2[2][2], float returnMatriz[2]) {
+  returnMatriz[0] = ((M1[0] * M2[0][0])) + ((M1[1] * M2[1][0]));
+  returnMatriz[1] = ((M1[0] * M2[0][1])) + ((M1[1] * M2[1][1]));
   return;
 }
