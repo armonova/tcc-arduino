@@ -50,16 +50,11 @@ TinyGPS gps;
 SoftwareSerial gpsSerial(GPS_RX, GPS_TX);
 
 // posição inicial do GPS
-float original_posi_gps_N;
-float original_posi_gps_E;
+float original_posi_gps;
 
 // matriz "Q", de covariância
-float Q_N[2] = {0.1, 0.1};
-float R_N[2] = {0.1, 0.1};
-
-// matriz "Q", de covariância
-float Q_E[2] = {0.1, 0.1};
-float R_E[2] = {0.1, 0.1};
+float Q[2] = {0.1, 0.1};
+float R[2] = {0.1, 0.1};
 
 void setup() {
   // Seta os pinos do led como output
@@ -97,8 +92,7 @@ void setup() {
   digitalWrite(CALIB_COV, HIGH);
   delay(2000); // espera 3 segundos para parar a placa
   #ifdef CALC_SD
-  standard_deviation_acc('N');
-  standard_deviation_acc('E');
+  standard_deviation_acc();
   standard_deviation_gps();
   #else
   delay(5000);
@@ -115,7 +109,7 @@ void setup() {
         newData = true;
     }
   }
-  gps.get_position(&original_posi_gps_E, &original_posi_gps_N);
+  gps.get_position(&original_posi_gps);
   // Armazena as posições no eixo North e East no momento que é ligado o dispositivo
   // Cuidado: removi a verificação de erro
 
@@ -136,26 +130,19 @@ bool calibration_pending = true;a
 void loop() {
   // [linhas][colunas]
   // Variáveis estáticas TODO testar para ver se usar static variables atrapalha em algo
-  static float new_P_ant_N[2][2] = {
-    {1.0, 0.0},
-    {0.0, 1.0}
-  };
-  static float new_P_ant_E[2][2] = {
+  static float new_P_ant[2][2] = {
     {1.0, 0.0},
     {0.0, 1.0}
   };
   
   static long millisAux = 0.0;
-  static float xk_kalman_N[2] = { 0.0, 0.0 };
-  static float xk_kalman_E[2] = { 0.0, 0.0 };
+  static float xk_kalman[2] = { 0.0, 0.0 };
   
-  static float xk_N[2] = { 0.0, 0.0 };
-  static float xk_E[2] = { 0.0, 0.0 };
+  static float xk[2] = { 0.0, 0.0 };
   
   // Matriz de estados
   // gps
-  static float yk_N[2] = { 0.0 , 0.0 };
-  static float yk_E[2] = { 0.0 , 0.0 };
+  static float yk[2] = { 0.0 , 0.0 };
   
   /*
    * TESTE: MATRIZ Q e R
@@ -164,7 +151,7 @@ void loop() {
    */
   // Variáveis
   bool newGpsData = false;
-  float posi_gps_E, posi_gps_N;
+  float posi_gps;
 
   // Faz uma medição a cada 100 ms = 100Hz
   // Precisei fazer essa alteração pois estava havendo delay na leitura do GPS e da MPU
@@ -178,12 +165,11 @@ void loop() {
   }
   if (newGpsData) {
     // Atualiza os dados do GPS
-    gps.get_position(&posi_gps_E, &posi_gps_N);
+    gps.get_position(&posi_gps);
     if (TinyGPS::GPS_INVALID_F_SPEED && TinyGPS::GPS_INVALID_F_ANGLE) {
 
-      yk_N[0] = posi_gps_N - original_posi_gps_N;
-      yk_E[0] = posi_gps_E - original_posi_gps_E;
-      mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N[1], &yk_E[1], xk_kalman_N[1], xk_kalman_E[1]);
+      yk[0] = posi_gps - original_posi_gps;
+      // mpu_new.returnCordCart(gps.f_speed_mps(), &yk_N[1], &yk_E[1], xk_kalman_N[1], xk_kalman_E[1]);
     } else {
       // Tem algum dado inválido
       // Serial.println("Dado inválido");
@@ -192,18 +178,16 @@ void loop() {
 
   // Leitura da MPU
   // Faz a aferição dos sensores
-  float acc_N, acc_E;
+  float acc_N = 0.0, acc_E = 0.0, acc = 0.0;
   if (mpu_new.update_data()) {
     mpu_new.make_conversion(&acc_N, &acc_E); // Faz a leitura dos acelerometro e a conversão das coordenadas
+    acc = acc_N;
   }
 
   // EVOLUÇÃO DOS ESTADOS - ACELERÔMETRO
-  float xk_ant_N[2];
-  float xk_ant_E[2];
-  xk_ant_N[0] = xk_N[0]; // posição
-  xk_ant_N[1] = xk_N[1]; // velocidade
-  xk_ant_E[0] = xk_E[0]; // posição
-  xk_ant_E[1] = xk_E[1]; // velocidade
+  float xk_ant[2];
+  xk_ant[0] = xk[0]; // posição
+  xk_ant[1] = xk[1]; // velocidade
 
   // Matriz "u"
   float B_1 = (millisAux == 0.0 ? 0.0 : (millis() - millisAux)) / 1000.0;
@@ -221,10 +205,8 @@ void loop() {
   };
 
   // Determinação de x_k - evolução dos estados
-  xk_N[0] = (xk_ant_N[0]) + (B_1 * xk_ant_N[1]) + (B_0 * acc_N); // posição
-  xk_N[1] = (xk_ant_N[1]) + (B_1 * acc_N); // velocidade
-  xk_E[0] = (xk_ant_E[0]) + (B_1 * xk_ant_E[1]) + (B_0 * acc_E); // posição
-  xk_E[1] = (xk_ant_E[1]) + (B_1 * acc_E); // velocidade
+  xk[0] = (xk_ant[0]) + (B_1 * xk_ant[1]) + (B_0 * acc); // posição
+  xk[1] = (xk_ant[1]) + (B_1 * acc); // velocidade
 
 
   /* Nesse ponto do código eu tenho a evolução dos estados do acelerômetro e GPS para
