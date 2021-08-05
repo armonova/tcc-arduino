@@ -190,7 +190,7 @@ void loop() {
 
   // Leitura da MPU
   // Faz a aferição dos sensores
-  float acc_N, acc_E;
+  float acc_N = 0.0, acc_E = 0.0;
   if (mpu_new.update_data()) {
     mpu_new.make_conversion(&acc_N, &acc_E); // Faz a leitura dos acelerometro e a conversão das coordenadas
   }
