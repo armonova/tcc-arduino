@@ -134,6 +134,10 @@ float threshold;
 bool calibration_pending = true;a
 #endif
 
+float acc_array[20] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+char index_acc = 0;
+
+
 void loop() {
   // [linhas][colunas]
   // Variáveis estáticas TODO testar para ver se usar static variables atrapalha em algo
@@ -195,7 +199,15 @@ void loop() {
   if (mpu_new.update_data()) {
     mpu_new.make_conversion(&acc_N, &acc_E); // Faz a leitura dos acelerometro e a conversão das coordenadas
     #ifdef AXIS_N
-    acc = acc_N; //TODO escolher o eixo
+    acc_array[index_acc] = acc_N;
+    index_acc ++;
+    if (index_acc == 20) index_acc = 0;
+    float sum_acc = 0.0;    
+    for (int i = 0; i < 20; i++) {
+      sum_acc += acc_array[i];
+    }
+    acc = sum_acc / 20;
+    acc_N; //TODO escolher o eixo
     #else
     acc = acc_E; //TODO escolher o eixo
     #endif
